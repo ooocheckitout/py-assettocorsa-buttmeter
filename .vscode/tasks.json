@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install WheelLock to Assetto Corsa",
+      "type": "shell",
+      "command": "python test_wheellock.py; if ($?) { Copy-Item -Path apps, content -Destination $env:AC_DIR -Recurse -Force; Write-Host \"installed to $env:AC_DIR\" }",
+      "options": {
+        "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] },
+        "env": { "AC_DIR": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\assettocorsa" }
+      },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}
