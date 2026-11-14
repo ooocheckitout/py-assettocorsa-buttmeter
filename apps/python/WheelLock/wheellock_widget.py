@@ -1,8 +1,9 @@
 # Wheel-slip widget for Assetto Corsa: four tyres, colour = each tyre's slip ratio as AC's
 # physics reports it (acsys.CS.SlipRatio). Negative = locking, positive = spinning.
-# Arrow from the car centre = direction of travel relative to the nose (body slip angle):
-# straight up = car goes where it points; tilted = car is rotating/sliding, tilt points the
-# way to countersteer. Colour works like the tyres: grey up to start, grey->red to full.
+# Dotted line = the car's own axis, nose to tail. Solid line with the arrow head = the
+# direction of travel through the car centre (body slip angle). Lines together = car goes
+# where it points; solid line tilted = car is rotating/sliding, head points the way to
+# countersteer. Colour works like the tyres: grey up to start, grey->red to full.
 # A second window ("WheelLock Settings") shows the live signals, the colour curve and the
 # thresholds, and lets you edit them. Open it with the sliders button on the widget.
 # Runs in AC's embedded Python 3.3: no f-strings, no third-party imports.
@@ -10,6 +11,7 @@
 import json
 import math
 import os
+import time
 import ac
 import acsys
 
@@ -33,6 +35,7 @@ PURPLE = (0.6, 0.3, 1.0, 1.0)  # lock at full
 AMBER = (1.0, 0.69, 0.0, 1.0)  # spin at full
 RED = (1.0, 0.2, 0.2, 1.0)     # rotation at full
 WHITE = (1.0, 1.0, 1.0, 1.0)
+AXIS = (1.0, 1.0, 1.0, 0.3)    # dotted car axis on the widget: a faint reference
 BTN_ON = (1.0, 1.0, 1.0, 0.7)
 BTN_OFF = (1.0, 1.0, 1.0, 0.2)  # at min/max scale
 
@@ -44,7 +47,7 @@ PIN_W = 28   # right end of BAR reserved for CSP's pin button
 BTN = 16     # button size
 
 # --- settings window layout (px) ----------------------------------------------
-SET_W, SET_H = 430, 610
+SET_W, SET_H = 430, 630
 PLOT_X, PLOT_W = 110, 270        # slip axis of the curve and the wheel rows
 CURVE_Y, CURVE_H = 110, 20
 ROW_Y, ROW_H = 140, 20           # FL, FR, RL, RR rows below the curve
@@ -65,6 +68,7 @@ RULES = (
     "  |value| >= full and speed >= min -> that colour stays for hold ms",
 )
 
+cfg_status = ""                          # last settings.json load/save result, shown in settings
 ui = None                                # loader-owned dict: control ids survive reloads
 speed = 0.0
 slip = [0.0, 0.0, 0.0, 0.0]              # raw CS.SlipRatio
@@ -146,31 +150,64 @@ def rot_step(b, dt):
 
 
 # --- settings -----------------------------------------------------------------
+def log(msg):
+    ac.log("WheelLock: " + msg)
+    ac.console("WheelLock: " + msg)
+
+
+def valid(k, v):
+    """Is v an acceptable saved value for setting k?"""
+    num = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool)
+    if k == "scale":
+        return v in SCALES
+    if k in ("lock", "spin", "rotate"):
+        return isinstance(v, list) and len(v) == 2 and all(map(num, v)) and 0 <= v[0] < v[1] <= 100
+    if k == "min_speed":
+        return num(v) and 0 <= v <= 100
+    if k == "hold_ms":
+        return num(v) and 0 <= v <= 1000
+    return False
+
+
 def load_cfg():
+    """Defaults, overlaid key by key with every valid value in settings.json."""
+    global cfg_status
     cfg.clear()
     cfg.update(json.loads(json.dumps(DEFAULTS)))  # deep copy
     try:
         with open(SETTINGS_FILE) as f:
             saved = json.load(f)
-        for k in DEFAULTS:
-            if k in saved:
-                cfg[k] = saved[k]
-        if cfg["scale"] not in SCALES:
-            cfg["scale"] = DEFAULTS["scale"]
-        for k in ("lock", "spin", "rotate"):
-            t = cfg[k]
-            if not (len(t) == 2 and 0 <= t[0] < t[1] <= 100):
-                cfg[k] = list(DEFAULTS[k])
-    except (IOError, ValueError, TypeError, KeyError):
-        pass
+    except IOError:
+        cfg_status = "no file yet, defaults"
+        return
+    except ValueError as e:
+        cfg_status = "unreadable, defaults: {}".format(e)
+        log("settings.json " + cfg_status)
+        return
+    if not isinstance(saved, dict):
+        saved = {}
+    bad = sorted(k for k in DEFAULTS if k in saved and not valid(k, saved[k]))
+    for k in DEFAULTS:
+        if k in saved and k not in bad:
+            cfg[k] = saved[k]
+    cfg_status = "loaded" + (", reset to default: " + ", ".join(bad) if bad else "")
+    if bad:
+        log("settings.json " + cfg_status)
 
 
 def save_cfg():
+    """Write via a temp file and os.replace: a crash mid-write can't leave a half file
+    that the next load would throw away."""
+    global cfg_status
+    tmp = SETTINGS_FILE + ".tmp"
     try:
-        with open(SETTINGS_FILE, "w") as f:
-            json.dump(cfg, f, indent=1)
-    except IOError:
-        pass
+        with open(tmp, "w") as f:
+            json.dump(cfg, f, indent=1, sort_keys=True)
+        os.replace(tmp, SETTINGS_FILE)
+        cfg_status = "saved " + time.strftime("%H:%M:%S")
+    except (IOError, OSError) as e:
+        cfg_status = "NOT SAVED: {}".format(e)
+        log("settings.json " + cfg_status)
 
 
 def set_threshold(kind, j, v):
@@ -300,9 +337,19 @@ def render(deltaT):
     for (x, y, w, h), c in zip(rects, shown):
         ac.glColor4f(*c)
         ac.glQuad(x, y, w, h)
+    # car axis: dotted, nose to tail, thin and faint, under the travel line
+    k = cfg["scale"]
+    ac.glColor4f(*AXIS)
+    dash, gap, t = 3 * k, 3 * k, max(1.0, 0.75 * k)
+    y = cy - reach
+    while y < cy + reach:
+        ac.glQuad(cx - t / 2, y, t, min(dash, cy + reach - y))
+        y += dash + gap
+    # travel line: solid, through the car centre, rotated by beta, head at the front end
     a = math.radians(max(-90.0, min(90.0, beta)))  # past 90 deg it's a spin; red says enough
+    dx, dy = reach * math.sin(a), reach * math.cos(a)
     ac.glColor4f(*rot_shown)
-    arrow(cx, cy, cx + reach * math.sin(a), cy - reach * math.cos(a), 3 * cfg["scale"])
+    arrow(cx - dx, cy + dy, cx + dx, cy - dy, 3 * k)
     i = SCALES.index(cfg["scale"])
     ac.glColor4f(*BTN_ON)
     draw_sliders_icon(*btns[0])
@@ -402,6 +449,7 @@ def layout():
     spin("min_speed", 110, y, 0, 100)
     lab("h_hold", "hold ms", 210, y + 2)
     spin("hold_ms", 310, y, 0, 1000, 10)
+    lab("file", None, 10, y + 30, 11)
     return L
 
 
@@ -520,7 +568,8 @@ def live_text():
     """Text of the live labels in layout() (text None there)."""
     t = {"speed": "acsys.CS.SpeedKMH   {:.1f} km/h".format(speed),
          "vel": "acsys.CS.LocalVelocity   x {:+.2f}  z {:+.2f} m/s".format(vel[0], vel[2]),
-         "beta": "beta  {:+.1f}".format(beta)}
+         "beta": "beta  {:+.1f}".format(beta),
+         "file": "settings.json  " + cfg_status[:70]}
     for i, (name, s) in enumerate(zip(WHEELS, slip)):
         t["wheel{}".format(i)] = "{}  {:+.3f}".format(name, s)
     return t

@@ -49,6 +49,7 @@ stub.setRange = lambda ctrl, lo, hi: set_value(ctrl, max(lo, min(hi, values.get(
 sys.path.insert(0, "apps/python/WheelLock")
 import wheellock_widget as w
 w.SETTINGS_FILE = os.devnull + ".none"  # never touch the real settings.json
+real_save = w.save_cfg
 w.save_cfg = lambda: None
 w.load_cfg()
 
@@ -96,15 +97,48 @@ w.cfg["lock"] = [2, 10]
 # safe area: tyres stay below the top bar, buttons stay clear of the CSP pin, at every scale
 for k in w.SCALES:
     win_w, win_h, rects, btns, (cx, cy, reach) = w.geometry(k)
-    assert reach <= cx <= win_w - reach and cy - reach >= w.BAR, k  # arrow fits at any angle
+    assert reach <= cx <= win_w - reach and cy - reach >= w.BAR and cy + reach <= win_h, k  # lines fit at any angle
     assert all(y >= w.BAR and x >= 0 and x + rw <= win_w and y + rh <= win_h for x, y, rw, rh in rects), k
     assert all(x >= 0 and x + w.BTN <= win_w - w.PIN_W and y + w.BTN <= w.BAR for x, y in btns), k
 print("layout ok")
+
+# settings.json: every edit is written, a load reads it back, bad values reset per key
+import tempfile
+tmpdir = tempfile.mkdtemp()
+w.SETTINGS_FILE, w.save_cfg = os.path.join(tmpdir, "settings.json"), real_save
+w.ui = {"ctl": {}}
+w.set_spinner = lambda key, v: None
+w.load_cfg()
+assert w.cfg_status == "no file yet, defaults" and w.cfg == w.DEFAULTS
+w.on_spin("lock.0", 5)
+w.on_spin("rotate.1", 12)
+w.on_spin("hold_ms", 300)
+assert w.cfg_status.startswith("saved ")
+w.cfg.clear()
+w.load_cfg()
+assert w.cfg_status == "loaded", w.cfg_status
+assert w.cfg["lock"] == [5, 10] and w.cfg["rotate"] == [3, 12] and w.cfg["hold_ms"] == 300, w.cfg
+assert os.listdir(tmpdir) == ["settings.json"]  # temp file replaced, not left behind
+with open(w.SETTINGS_FILE, "w") as f:
+    json.dump({"lock": [9, 3], "spin": [4, 20], "scale": 7, "hold_ms": "x"}, f)
+w.load_cfg()
+assert w.cfg["spin"] == [4, 20] and w.cfg["lock"] == [2, 10] and w.cfg["scale"] == 1.0
+assert w.cfg_status == "loaded, reset to default: hold_ms, lock, scale", w.cfg_status
+with open(w.SETTINGS_FILE, "w") as f:
+    f.write('{"lock": [5, ')  # half-written file
+w.load_cfg()
+assert w.cfg == w.DEFAULTS and w.cfg_status.startswith("unreadable")
+del logs[:]
+w.SETTINGS_FILE, w.save_cfg = os.devnull + ".none", lambda: None
+del w.set_spinner  # back to the module function
+w.load_cfg()
+print("settings file ok")
 
 # settings window: no two controls or GL drawings overlap, all inside the window.
 # Text width per char measured from in-game screenshots (13 px font 6.8, 11 px 4.6).
 CHAR_W = {13: 6.8, 11: 4.6}
 w.speed, w.slip, w.vel, w.beta = 299.9, [-0.123] * 4, (-12.34, 0, 88.88), -45.6  # widest text
+w.cfg_status = "NOT SAVED: [Errno 13] Permission denied: 'C:\\Program Files (x86)\\Steam\\x'"
 live = w.live_text()
 boxes = []
 for key, spec in w.layout().items():
