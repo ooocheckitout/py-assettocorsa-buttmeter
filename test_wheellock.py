@@ -14,10 +14,10 @@ class Stub(types.ModuleType):
 
 stub = sys.modules["ac"] = sys.modules["acsys"] = Stub("ac")
 sys.modules["imp"] = importlib  # AC's Python 3.3 has imp; newer Pythons only importlib
-stub.CS = types.SimpleNamespace(SpeedKMH=0, SlipRatio=1)
+stub.CS = types.SimpleNamespace(SpeedKMH=0, SlipRatio=1, LocalVelocity=2)
 stub.GL = types.SimpleNamespace(Quads=0, Triangles=1)
-car = {"speed": 100.0, "slip": [0.0] * 4}
-stub.getCarState = lambda c, what: car["speed"] if what == 0 else list(car["slip"])
+car = {"speed": 100.0, "slip": [0.0] * 4, "vel": (0.0, 0.0, 27.0)}
+stub.getCarState = lambda c, what: [car["speed"], list(car["slip"]), car["vel"]][what]
 stub.getFocusedCar = lambda: 0
 logs = []
 stub.log = logs.append
@@ -28,7 +28,23 @@ callbacks = []
 for name in ("addRenderCallback", "addOnClickedListener", "addOnValueChangeListener",
              "addOnAppActivatedListener", "addOnAppDismissedListener"):
     setattr(stub, name, lambda ctrl, fn: callbacks.append(weakref.ref(fn)))
-stub.setValue = lambda ctrl, v: values.__setitem__(ctrl, v)
+listeners = {}  # ctrl -> value-change listener; AC calls it from inside setValue/setRange
+
+
+def on_value(ctrl, fn):
+    callbacks.append(weakref.ref(fn))
+    listeners[ctrl] = fn
+
+
+def set_value(ctrl, v):
+    values[ctrl] = v
+    if ctrl in listeners:
+        listeners[ctrl](v)
+
+
+stub.addOnValueChangeListener = on_value
+stub.setValue = set_value
+stub.setRange = lambda ctrl, lo, hi: set_value(ctrl, max(lo, min(hi, values.get(ctrl, 0))))
 
 sys.path.insert(0, "apps/python/WheelLock")
 import wheellock_widget as w
@@ -53,34 +69,81 @@ assert w.step(100, [0.0] * 4, 0.1)[:2] == [w.PURPLE, w.AMBER]  # held (120 ms)
 assert w.step(100, [0.0] * 4, 0.05)[:2] == [w.GREY, w.GREY]    # expired
 print("step ok")
 
+# rotation: body slip angle sign (AC x = left), zones, red hold, low speed
+assert abs(w.body_slip((-1.0, 0, 1.0), 100) - 45) < 1e-9   # travelling right of the nose
+assert abs(w.body_slip((1.0, 0, 1.0), 100) + 45) < 1e-9
+assert w.body_slip((5.0, 0, 0.1), 5) == 0.0                  # below min speed
+assert [w.rot_colour(b) for b in (0, -2.9, 3, -3)] == [w.GREY] * 4    # <= start, like tyres
+assert near(w.rot_colour(5.5), w.lerp(w.GREY, w.RED, 0.5)) and near(w.rot_colour(-5.5), w.rot_colour(5.5))
+assert w.rot_colour(8) == w.RED and w.rot_colour(-120) == w.RED
+assert w.rot_step(9, 0.016) == w.RED and w.rot_step(0, 0.1) == w.RED   # held
+assert w.rot_step(0, 0.05) == w.GREY                                   # expired
+print("rotation ok")
+
 # thresholds stay strictly increasing whatever the user dials in
-w.ui = {"lock": [101, 102], "spin": [103, 104]}
+w.ui = {"ctl": {"lock.0": 101, "lock.1": 102}}
+listeners[101] = lambda v: w.on_spin("lock.0", v)  # wired like AC: setValue re-enters
 w.set_threshold("lock", 1, 1)        # full down to 1: start pushed below it
 assert w.cfg["lock"] == [0, 1], w.cfg["lock"]
 w.set_threshold("lock", 0, 150)      # start up to its max 99: full pushed up
 assert w.cfg["lock"] == [99, 100], w.cfg["lock"]
 assert values[101] == 99 and values[102] == 100
+w.on_spin("lock.0", 3)                # a user edit still goes through
+assert w.cfg["lock"] == [3, 100], w.cfg["lock"]
+del listeners[101]
 w.cfg["lock"] = [2, 10]
 
 # safe area: tyres stay below the top bar, buttons stay clear of the CSP pin, at every scale
 for k in w.SCALES:
-    win_w, win_h, rects, btns = w.geometry(k)
+    win_w, win_h, rects, btns, (cx, cy, reach) = w.geometry(k)
+    assert reach <= cx <= win_w - reach and cy - reach >= w.BAR, k  # arrow fits at any angle
     assert all(y >= w.BAR and x >= 0 and x + rw <= win_w and y + rh <= win_h for x, y, rw, rh in rects), k
     assert all(x >= 0 and x + w.BTN <= win_w - w.PIN_W and y + w.BTN <= w.BAR for x, y in btns), k
 print("layout ok")
+
+# settings window: no two controls or GL drawings overlap, all inside the window.
+# Text width per char measured from in-game screenshots (13 px font 6.8, 11 px 4.6).
+CHAR_W = {13: 6.8, 11: 4.6}
+w.speed, w.slip, w.vel, w.beta = 299.9, [-0.123] * 4, (-12.34, 0, 88.88), -45.6  # widest text
+live = w.live_text()
+boxes = []
+for key, spec in w.layout().items():
+    if spec[0] == "label":
+        _, text, x, y, size = spec
+        text = live[key] if text is None else text
+        boxes.append((key, x, y, len(text) * CHAR_W[size], size + 2))
+    else:
+        boxes.append((key, spec[1], spec[2], w.SPIN_W, w.SPIN_H))
+gl_w = w.SWATCH_X + 20 - w.PLOT_X
+boxes += [("slip curve", w.PLOT_X, w.CURVE_Y - 4, w.PLOT_W, w.CURVE_H + 8),
+          ("wheel rows", w.PLOT_X, w.ROW_Y, gl_w, 4 * w.ROW_H),
+          ("rot curve", w.PLOT_X, w.ROT_Y - 4, w.PLOT_W, w.CURVE_H + 8),
+          ("beta row", w.PLOT_X, w.BETA_Y, gl_w, w.ROW_H)]
+for k, x, y, bw, bh in boxes:
+    assert 0 <= x and x + bw <= w.SET_W and 30 <= y and y + bh <= w.SET_H, (k, x, y, bw, bh)
+for i, (k1, x1, y1, w1, h1) in enumerate(boxes):
+    for k2, x2, y2, w2, h2 in boxes[i + 1:]:
+        assert x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1, (k1, k2)
+print("settings layout ok")
 
 # full session: build, update, render both windows, toggle settings, hot reload keeps the ui
 import WheelLock
 WheelLock.widget.SETTINGS_FILE = w.SETTINGS_FILE
 WheelLock.acMain(0)
 ui = WheelLock.ui
+# no settings file -> defaults; building the window (setRange/setValue fire listeners) must not edit them
+assert WheelLock.widget.cfg == w.DEFAULTS, WheelLock.widget.cfg
+spins = [k for k, spec in WheelLock.widget.layout().items() if spec[0] == "spin"]
+assert all(values[ui["ctl"][k]] == WheelLock.widget.spin_value(k) for k in spins)
+assert WheelLock.widget.geo is not None  # widget laid out
 assert ui["app"] and ui["settings"] and len(ui["buttons"]) == 3
 gc.collect()
-assert len(callbacks) == 13 and all(r() for r in callbacks), [r() for r in callbacks]
+assert len(callbacks) == 15 and all(r() for r in callbacks), [r() for r in callbacks]
 callbacks[3]()(0.016)  # AC calling the widget render callback
 WheelLock.widget.toggle_settings()
 assert ui["settings_open"]
 car["slip"] = [-0.07, 0.0, 0.0, 0.3]
+car["vel"] = (-3.0, 0.0, 27.0)  # ~6 deg slide
 WheelLock.acUpdate(0.016)
 WheelLock.widget.render(0.016)
 WheelLock.widget.render_settings(0.016)
@@ -89,4 +152,6 @@ WheelLock.mtime = 0  # pretend the file changed
 WheelLock.acUpdate(WheelLock.RELOAD_CHECK)
 assert logs == ["WheelLock: reloaded"], logs
 assert WheelLock.ui == before  # no duplicate windows or controls
+assert near(WheelLock.widget.rot_shown, w.rot_colour(WheelLock.widget.beta)) and \
+    WheelLock.widget.rot_shown != w.GREY
 print("session ok")
