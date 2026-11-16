@@ -14,7 +14,7 @@ class Settings:
 
 
 def default_settings() -> Settings:
-    return Settings(Threshold(5.0, 10.0), Threshold(5.0, 10.0))
+    return Settings(Threshold(0.05, 0.1), Threshold(0.05, 0.1))
 
 
 def load_settings(path: str) -> Settings:

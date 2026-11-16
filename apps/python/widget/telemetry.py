@@ -18,7 +18,5 @@ def idle_wheel_slips() -> WheelSlips:
 
 def read_wheel_slips() -> WheelSlips:
     car = ac.getFocusedCar()
-    front_left, front_right, rear_left, rear_right = ac.getCarState(
-        car, acsys.CS.SlipRatio
-    )
-    return WheelSlips(front_left, front_right, rear_left, rear_right)
+    fl, fr, rl, rr = ac.getCarState(car, acsys.CS.SlipRatio)
+    return WheelSlips(fl, fr, rl, rr)
