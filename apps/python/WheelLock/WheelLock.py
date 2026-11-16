@@ -4,6 +4,9 @@
 # direction of travel through the car centre (body slip angle). Lines together = car goes
 # where it points; solid line tilted = car is rotating/sliding, head points the way to
 # countersteer. Colour works like the tyres: grey up to start, grey->red to full.
+# White lines above the front tyres and below the rear ones = each tyre's slip angle
+# (acsys.CS.SlipAngle), tyre-wide. Hidden up to angle start, grey->white to full, held like
+# the tyres.
 # A second window ("WheelLock Settings") shows the live signals, the colour curves and the
 # thresholds, and lets you edit them. Open it with the sliders button on the widget.
 #
@@ -34,14 +37,15 @@ def fields(record: Record) -> dict:
 
 
 class Settings(Record):
-    __slots__ = ("scale", "lock", "spin", "rotate", "min_speed", "hold_ms")
+    __slots__ = ("scale", "lock", "spin", "rotate", "angle", "min_speed", "hold_ms")
 
-    def __init__(self, scale: float, lock: tuple, spin: tuple, rotate: tuple,
+    def __init__(self, scale: float, lock: tuple, spin: tuple, rotate: tuple, angle: tuple,
                  min_speed: float, hold_ms: float) -> None:
         self.scale = scale
         self.lock = lock
         self.spin = spin
         self.rotate = rotate
+        self.angle = angle
         self.min_speed = min_speed
         self.hold_ms = hold_ms
 
@@ -55,12 +59,17 @@ class Hold(Record):
 
 
 class State(Record):
-    __slots__ = ("speed", "slips", "shown", "holds", "velocity", "beta", "beta_shown", "beta_hold")
+    __slots__ = ("speed", "slips", "angles", "angles_shown", "angle_holds", "shown", "holds",
+                 "velocity", "beta", "beta_shown", "beta_hold")
 
-    def __init__(self, speed: float, slips: tuple, shown: tuple, holds: tuple, velocity: tuple,
-                 beta: float, beta_shown: tuple, beta_hold: Hold) -> None:
+    def __init__(self, speed: float, slips: tuple, angles: tuple, angles_shown: tuple,
+                 angle_holds: tuple, shown: tuple, holds: tuple, velocity: tuple, beta: float,
+                 beta_shown: tuple, beta_hold: Hold) -> None:
         self.speed = speed
         self.slips = slips
+        self.angles = angles
+        self.angles_shown = angles_shown
+        self.angle_holds = angle_holds
         self.shown = shown
         self.holds = holds
         self.velocity = velocity
@@ -130,7 +139,8 @@ BACKGROUND = "apps/python/WheelLock/img/bg.png"
 # rotate: [start, full] in degrees of body slip angle. Defaults from recorded laps
 # (mp4-12c GT3, Laguna Seca): grip stays under 3 deg 90% of the time; once a slide passes
 # 8 deg 28% of them ended in a spin, and the spins only got countersteer at 10-14 deg.
-DEFAULTS = Settings(scale=1.0, lock=(2, 10), spin=(2, 10), rotate=(3, 8),
+# angle: [start, full] in degrees of tyre SlipAngle.
+DEFAULTS = Settings(scale=1.0, lock=(2, 10), spin=(2, 10), rotate=(3, 8), angle=(6, 10),
                     min_speed=10, hold_ms=120)
 
 # --- colours (rgba) -----------------------------------------------------------
@@ -141,27 +151,32 @@ RED = (1.0, 0.2, 0.2, 1.0)      # rotation at full
 WHITE = (1.0, 1.0, 1.0, 1.0)
 FAINT = (1.0, 1.0, 1.0, 0.15)   # empty track behind a live marker
 AXIS = (1.0, 1.0, 1.0, 0.3)     # dotted car axis on the widget
+SLIP_LINE = (0.9, 0.9, 0.9, 0.85)  # tyre slip angle line at full
+HIDDEN = (0.0, 0.0, 0.0, 0.0)      # slip angle line below start
 BUTTON_ON = (1.0, 1.0, 1.0, 0.7)
 BUTTON_OFF = (1.0, 1.0, 1.0, 0.2)  # at min/max scale
 
 # --- widget layout (px at scale 1.0) ------------------------------------------
 TYRE_WIDTH, TYRE_HEIGHT = 16, 26
 TRACK_GAP, AXLE_GAP = 30, 18   # left-right gap, front-rear gap
+LINE_GAP = 6                   # strip above front / below rear tyres for the slip angle lines
 SCALES = (0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0)
 TOP_STRIP = 24   # kept free of tyres: AC/CSP draw the pin there, our buttons sit beside it
 PIN_WIDTH = 28   # right end of TOP_STRIP reserved for CSP's pin button
 BUTTON = 16      # button size
 
 # --- settings window layout (px) ----------------------------------------------
-SETTINGS_SIZE = (430, 630)
+SETTINGS_SIZE = (430, 830)
 PLOT_X, PLOT_WIDTH = 110, 270    # x axis of both curves and the live rows
 CURVE_HEIGHT = 20
 SLIP_Y = 110                     # slip curve
 ROW_Y, ROW_HEIGHT = 140, 20      # FL, FR, RL, RR rows below the slip curve
 SWATCH_X = PLOT_X + PLOT_WIDTH + 12  # colour the widget is showing right now
-BETA_Y = 270                     # rotation curve
+ANGLE_Y = 270                    # slip angle curve
+ANGLE_ROW_Y = ANGLE_Y + 30       # FL, FR, RL, RR slip angle rows under it
+BETA_Y = 420                     # rotation curve
 BETA_ROW_Y = BETA_Y + 30         # live beta row under its curve
-RULES_Y, THRESHOLDS_Y = 335, 460
+RULES_Y, THRESHOLDS_Y = 485, 630
 SPINNER_SIZE = (90, 20)
 WHEELS = ("FL", "FR", "RL", "RR")
 
@@ -171,13 +186,15 @@ RULES = (
     "  SpeedKMH < min speed            -> all tyres grey, arrow grey and straight up",
     "  SlipRatio < 0 (lock):  |s| <= start grey, start..full grey->purple, >= full purple",
     "  SlipRatio > 0 (spin):  |s| <= start grey, start..full grey->amber,  >= full amber",
+    "  SlipAngle (angle):     |a| <= start no line, start..full grey->white, >= full white",
     "  beta = atan2(-x, z) of LocalVelocity, + = travelling right of the nose, arrow tilts",
     "  beta (rotate):         |b| <= start grey, start..full grey->red,    >= full red",
     "  |value| >= full and speed >= min -> that colour stays for hold ms",
 )
 
-IDLE = State(speed=0.0, slips=(0.0,) * 4, shown=(GREY,) * 4, holds=(Hold(0.0, GREY),) * 4,
-             velocity=(0.0, 0.0, 0.0), beta=0.0, beta_shown=GREY, beta_hold=Hold(0.0, GREY))
+IDLE = State(speed=0.0, slips=(0.0,) * 4, angles=(0.0,) * 4, angles_shown=(HIDDEN,) * 4,
+             angle_holds=(Hold(0.0, HIDDEN),) * 4, shown=(GREY,) * 4,
+             holds=(Hold(0.0, GREY),) * 4, velocity=(0.0, 0.0, 0.0), beta=0.0, beta_shown=GREY, beta_hold=Hold(0.0, GREY))
 
 
 # --- math ---------------------------------------------------------------------
@@ -222,6 +239,14 @@ def beta_color(beta: float, settings: Settings) -> tuple:
     return ramp(abs(beta), start, full, RED)
 
 
+def angle_color(angle: float, settings: Settings) -> tuple:
+    """Tyre SlipAngle (deg) -> hidden up to start, then the same ramp as the tyres to white."""
+    start, full = settings.angle
+    if abs(angle) <= start:
+        return HIDDEN
+    return ramp(abs(angle), start, full, SLIP_LINE)
+
+
 def body_slip(velocity: tuple, speed: float, min_speed: float) -> float:
     """Angle (deg) between where the car points and where it travels; + = travel to the right.
     AC's local frame is y up, z forward, x left, so right = -x (checked against tyre contact
@@ -251,18 +276,31 @@ def tyre_step(slip: float, speed: float, previous: Hold, delta: float,
     return hold(color, at_full, previous, delta, settings.hold_ms / 1000.0)
 
 
-def advance(state: State, speed: float, slips: list, velocity: tuple, delta: float,
-            settings: Settings) -> State:
+def angle_step(angle: float, speed: float, previous: Hold, delta: float,
+               settings: Settings) -> tuple:
+    """-> (colour to show, new Hold) for one tyre's slip angle line this frame."""
+    moving = speed >= settings.min_speed
+    color = angle_color(angle, settings) if moving else HIDDEN
+    at_full = moving and abs(angle) >= settings.angle[1]
+    return hold(color, at_full, previous, delta, settings.hold_ms / 1000.0)
+
+
+def advance(state: State, speed: float, slips: list, angles: list, velocity: tuple,
+            delta: float, settings: Settings) -> State:
     """Next frame's state from this frame's telemetry. No look-ahead on the beta rate: in
     recordings spins (11-62 deg/s) and saves (4-87 deg/s) overlap, so prediction only added
     false reds."""
     tyres = [tyre_step(slip, speed, previous, delta, settings)
              for slip, previous in zip(slips, state.holds)]
-    beta = body_slip(velocity, speed, settings.min_speed)
+    lines = [angle_step(angle, speed, previous, delta, settings)
+             for angle, previous in zip(angles, state.angle_holds)]
+    beta =body_slip(velocity, speed, settings.min_speed)
     beta_full = abs(beta) >= settings.rotate[1]
     beta_shown, beta_hold = hold(beta_color(beta, settings), beta_full, state.beta_hold,
                                  delta, settings.hold_ms / 1000.0)
-    return State(speed=speed, slips=tuple(slips),
+    return State(speed=speed, slips=tuple(slips), angles=tuple(angles),
+                 angles_shown=tuple(color for color, _ in lines),
+                 angle_holds=tuple(line_hold for _, line_hold in lines),
                  shown=tuple(color for color, _ in tyres),
                  holds=tuple(tyre_hold for _, tyre_hold in tyres),
                  velocity=tuple(velocity), beta=beta,
@@ -278,7 +316,7 @@ def is_valid(key: str, value: object) -> bool:
     """Is value an acceptable saved value for setting key?"""
     if key == "scale":
         return value in SCALES
-    if key in ("lock", "spin", "rotate"):
+    if key in ("lock", "spin", "rotate", "angle"):
         return (isinstance(value, list) and len(value) == 2 and all(map(is_number, value))
                 and 0 <= value[0] < value[1] <= 100)
     if key == "min_speed":
@@ -358,19 +396,21 @@ def geometry(scale: float) -> Layout:
     and the car centre and half-length at this scale."""
     tyre_width, tyre_height = int(TYRE_WIDTH * scale), int(TYRE_HEIGHT * scale)
     track, axle = int(TRACK_GAP * scale), int(AXLE_GAP * scale)
+    line_gap = int(LINE_GAP * scale)
     car_width = tyre_width * 2 + track
+    car_top = TOP_STRIP + line_gap
     reach = tyre_height + axle / 2.0  # car centre to the front edge of the tyres
     width = max(car_width, int(2 * reach + 4 * scale), PIN_WIDTH + 3 * (BUTTON + 4) + 4)
     car_left = (width - car_width) // 2
     tyres = [(tyre_x, tyre_y, tyre_width, tyre_height)
-             for tyre_y in (TOP_STRIP, TOP_STRIP + tyre_height + axle)
+             for tyre_y in (car_top, car_top + tyre_height + axle)
              for tyre_x in (car_left, car_left + tyre_width + track)]
     buttons_left = width - PIN_WIDTH - 3 * (BUTTON + 4)
     buttons_top = (TOP_STRIP - BUTTON) // 2
-    return Layout(width=width, height=TOP_STRIP + tyre_height * 2 + axle, tyres=tyres,
+    return Layout(width=width, height=car_top + tyre_height * 2 + axle + line_gap, tyres=tyres,
                   buttons=[(buttons_left + index * (BUTTON + 4), buttons_top)
                            for index in range(3)],
-                  center=(width / 2.0, TOP_STRIP + reach), reach=reach)
+                  center=(width / 2.0, car_top + reach), reach=reach)
 
 
 def draw_polygon(mode: int, points: list) -> None:
@@ -433,6 +473,15 @@ def draw_travel(center: tuple, reach: float, beta: float, color: tuple, scale: f
                (center_x + offset_x, center_y - offset_y), 3 * scale)
 
 
+def draw_slip_angles(tyres: list, colors: tuple, scale: float) -> None:
+    """Tyre-wide line above each front tyre and below each rear one, in its slip angle colour."""
+    thickness, gap = max(1.0, 2 * scale), LINE_GAP * scale
+    for index, ((left, top, width, height), color) in enumerate(zip(tyres, colors)):
+        line_y = top - gap / 2 if index < 2 else top + height + gap / 2
+        ac.glColor4f(*color)
+        ac.glQuad(left, line_y - thickness / 2, width, thickness)
+
+
 def draw_buttons(positions: list, scale: float) -> None:
     index = SCALES.index(scale)
     ac.glColor4f(*BUTTON_ON)
@@ -443,10 +492,12 @@ def draw_buttons(positions: list, scale: float) -> None:
         draw_resize_icon(position[0], position[1], outward)
 
 
-def draw_widget(layout: Layout, state: State, scale: float) -> None:
+def draw_widget(layout: Layout, state: State, settings: Settings) -> None:
+    scale = settings.scale
     for tyre, color in zip(layout.tyres, state.shown):
         ac.glColor4f(*color)
         ac.glQuad(*tyre)
+    draw_slip_angles(layout.tyres, state.angles_shown, scale)
     draw_car_axis(layout.center, layout.reach, scale)
     draw_travel(layout.center, layout.reach, state.beta, state.beta_shown, scale)
     draw_buttons(layout.buttons, scale)
@@ -509,6 +560,14 @@ def draw_settings(state: State, settings: Settings) -> None:
         draw_live_row(ROW_Y + index * ROW_HEIGHT, plot_x(state.slips[index], half),
                       state.shown[index])
 
+    half = settings.angle[1] * 1.25
+    colors = [angle_color(column_value(column, half), settings) for column in range(PLOT_WIDTH)]
+    ticks = [0.0] + [side * limit for limit in settings.angle for side in (-1, 1)]
+    draw_curve(ANGLE_Y, colors, [plot_x(tick, half) for tick in ticks])
+    for index in range(4):
+        draw_live_row(ANGLE_ROW_Y + index * ROW_HEIGHT, plot_x(state.angles[index], half),
+                      state.angles_shown[index])
+
     half = beta_range(settings)
     colors = [beta_color(column_value(column, half), settings) for column in range(PLOT_WIDTH)]
     ticks = [0.0] + [side * limit for limit in settings.rotate for side in (-1, 1)]
@@ -530,6 +589,15 @@ def settings_layout() -> list:
     ]
     for index in range(4):
         controls.append(Label("wheel{}".format(index), None, 10, ROW_Y + index * ROW_HEIGHT + 2))
+    controls += [
+        Label("h_angle", "acsys.CS.SlipAngle", 10, ANGLE_Y - 35),
+        Label("ax_angle_left", "left  <", PLOT_X, ANGLE_Y - 20, 11),
+        Label("ax_angle0", "0", PLOT_X + PLOT_WIDTH / 2 - 3, ANGLE_Y - 20, 11),
+        Label("ax_angle_right", ">  right", PLOT_X + PLOT_WIDTH - 42, ANGLE_Y - 20, 11),
+    ]
+    for index in range(4):
+        controls.append(Label("angle{}".format(index), None, 10,
+                              ANGLE_ROW_Y + index * ROW_HEIGHT + 2))
     # rotation: same pattern
     controls += [
         Label("velocity", None, 10, BETA_Y - 35),
@@ -541,17 +609,18 @@ def settings_layout() -> list:
     for index, text in enumerate(RULES):
         controls.append(Label("rule{}".format(index), text, 10, RULES_Y + index * 17, 11))
     controls.append(Label("h_thresholds",
-                          "THRESHOLDS  lock, spin: % of |SlipRatio|   rotate: deg", 10, THRESHOLDS_Y))
+                          "THRESHOLDS  lock, spin: % of |SlipRatio|   rotate, angle: deg", 10,
+                          THRESHOLDS_Y))
     for index, name in enumerate(("start", "full")):
         controls.append(Label("h_column{}".format(index), name, 110 + index * 100,
                               THRESHOLDS_Y + 18, 11))
-    for row, kind in enumerate(("lock", "spin", "rotate")):
+    for row, kind in enumerate(("lock", "spin", "rotate", "angle")):
         row_top = THRESHOLDS_Y + 35 + row * 26
         controls.append(Label("h_" + kind, kind, 10, row_top + 2))
         for index in range(2):
             controls.append(Spinner("{}.{}".format(kind, index), 110 + index * 100, row_top,
                                     index, 99 + index))
-    row_top = THRESHOLDS_Y + 35 + 3 * 26 + 4
+    row_top = THRESHOLDS_Y + 35 + 4 * 26 + 4
     controls += [
         Label("h_min_speed", "min speed km/h", 10, row_top + 2),
         Spinner("min_speed", 110, row_top, 0, 100),
@@ -571,6 +640,8 @@ def live_text(state: State, status: str) -> dict:
              "file": "settings.json  " + status[:70]}
     for index, (name, slip) in enumerate(zip(WHEELS, state.slips)):
         texts["wheel{}".format(index)] = "{}  {:+.3f}".format(name, slip)
+    for index, (name, angle) in enumerate(zip(WHEELS, state.angles)):
+        texts["angle{}".format(index)] = "{}  {:+.1f} deg".format(name, angle)
     return texts
 
 
@@ -627,7 +698,7 @@ def render_widget(delta_time: float) -> None:
     ac.setBackgroundOpacity(ui.app, 0)
     for button in ui.buttons:
         ac.setBackgroundOpacity(button, 0)
-    draw_widget(geometry(settings.scale), state, settings.scale)
+    draw_widget(geometry(settings.scale), state, settings)
 
 
 def render_settings(delta_time: float) -> None:
@@ -720,5 +791,6 @@ def acUpdate(delta_time: float) -> None:
     state = advance(state,
                     ac.getCarState(car, acsys.CS.SpeedKMH),
                     ac.getCarState(car, acsys.CS.SlipRatio),
+                    ac.getCarState(car, acsys.CS.SlipAngle),
                     ac.getCarState(car, acsys.CS.LocalVelocity),
                     delta_time, settings)
