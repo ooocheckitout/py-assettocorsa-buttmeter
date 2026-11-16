@@ -8,7 +8,9 @@ FAINT = (1.0, 1.0, 1.0, 0.15)
 
 
 class Bar:
-    def __init__(self, left: float, top: float, width: int, height: float, half: float) -> None:
+    def __init__(
+        self, left: float, top: float, width: int, height: float, half: float
+    ) -> None:
         self.left = left
         self.top = top
         self.width = width
@@ -17,29 +19,35 @@ class Bar:
 
 
 class ColorRange:
-    def __init__(self, start: float, full: float, color_from: tuple, color_to: tuple) -> None:
+    def __init__(
+        self, start: float, end: float, color_from: tuple, color_to: tuple
+    ) -> None:
         self.start = start
-        self.full = full
+        self.end = end
         self.color_from = color_from
         self.color_to = color_to
 
 
 def blend(color_from: tuple, color_to: tuple, fraction: float) -> tuple:
-    return tuple(start + (end - start) * fraction for start, end in zip(color_from, color_to))
+    return tuple(
+        start + (end - start) * fraction for start, end in zip(color_from, color_to)
+    )
 
 
 def range_fraction(value: float, color_range: ColorRange) -> float:
-    width = (color_range.full - color_range.start) or 1e-9
+    width = (color_range.end - color_range.start) or 1e-9
     return max(0.0, min(1.0, (value - color_range.start) / width))
 
 
 def range_distance(value: float, color_range: ColorRange) -> float:
-    low, high = sorted((color_range.start, color_range.full))
+    low, high = sorted((color_range.start, color_range.end))
     return max(low - value, 0.0, value - high)
 
 
 def color_at(value: float, color_ranges: list) -> tuple:
-    nearest = min(color_ranges, key=lambda color_range: range_distance(value, color_range))
+    nearest = min(
+        color_ranges, key=lambda color_range: range_distance(value, color_range)
+    )
     return blend(nearest.color_from, nearest.color_to, range_fraction(value, nearest))
 
 
@@ -67,7 +75,7 @@ def draw_ticks(bar: Bar, color_ranges: list) -> None:
     draw_tick(bar, 0.0)
     for color_range in color_ranges:
         draw_tick(bar, color_range.start)
-        draw_tick(bar, color_range.full)
+        draw_tick(bar, color_range.end)
 
 
 def draw_marker_row(bar: Bar, top: float, height: float, value: float) -> None:
