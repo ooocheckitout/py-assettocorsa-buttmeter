@@ -3,8 +3,8 @@ import ac
 
 def acMain(ac_version: str) -> str:
     """Runs once the session is loaded."""
-    ac.newApp("widget")
-    return "widget"
+    app = ac.newApp("WheelLock")
+    return "WheelLock"
 
 
 def acUpdate(deltaT: float) -> None:

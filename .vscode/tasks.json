@@ -12,10 +12,30 @@
       "type": "shell",
       "command": "Copy-Item apps, content $env:AC_DIR -Recurse -Force",
       "options": {
-        "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] },
-        "env": { "AC_DIR": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\assettocorsa" }
+        "shell": {
+          "executable": "powershell.exe",
+          "args": ["-NoProfile", "-Command"]
+        },
+        "env": {
+          "AC_DIR": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\assettocorsa"
+        }
       },
-      "group": { "kind": "build", "isDefault": true },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "zip",
+      "type": "shell",
+      "command": "git archive -o WheelLock.zip HEAD apps content",
+      "options": {
+        "shell": {
+          "executable": "powershell.exe",
+          "args": ["-NoProfile", "-Command"]
+        }
+      },
       "problemMatcher": []
     }
   ]
