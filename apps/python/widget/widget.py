@@ -16,7 +16,7 @@ from render import (
     draw_ticks,
 )
 from settings import Settings, Threshold, load_settings, save_settings
-from telemetry import WheelSlips, idle_wheel_slips, read_wheel_slips
+from telemetry import Telemetry, WheelSlips, idle_telemetry, read_telemetry
 
 APP_NAME = "widget"
 SETTINGS_PATH = os.path.join(
@@ -25,58 +25,158 @@ SETTINGS_PATH = os.path.join(
 MARGIN = 10
 LABEL_WIDTH = 75
 BAR_LEFT = MARGIN + LABEL_WIDTH
-BAR_TOP = 40
+FIRST_TOP = 40
 BAR_WIDTH = 270
 BAR_HEIGHT = 20
 ROW_HEIGHT = 16
-ROWS_TOP = BAR_TOP + BAR_HEIGHT + 10
-SPINNER_TOP = 160
+ROWS_GAP = 10
+STEPPERS_GAP = 26
+ZONE_HEIGHT = 50
 STEPPER_WIDTH = 100
 BUTTON_SIZE = 20
-STEP = 0.01
-THRESHOLD_MIN = 0.01
-THRESHOLD_MAX = 0.5
 WHEEL_NAMES = ("FL", "FR", "RL", "RR")
 
-settings = load_settings(SETTINGS_PATH)
-wheel_slips = idle_wheel_slips()
-listeners = []
-value_labels = []
+
+class Zone:
+    def __init__(self, kind: str, title: str, sides: tuple, color: tuple) -> None:
+        self.kind = kind
+        self.title = title
+        self.sides = sides
+        self.color = color
 
 
-def lock_range(threshold: Threshold) -> ColorRange:
-    return ColorRange(-threshold.start, -threshold.end, GREY, PURPLE)
-
-
-def spin_range(threshold: Threshold) -> ColorRange:
-    return ColorRange(threshold.start, threshold.end, GREY, AMBER)
-
-
-def create_bar(settings: Settings) -> Bar:
-    half = max(settings.lock.end, settings.spin.end) * 1.25
-    return Bar(BAR_LEFT, BAR_TOP, BAR_WIDTH, BAR_HEIGHT, half)
+class Gauge:
+    def __init__(
+        self,
+        title: str,
+        zones: list,
+        row_names: tuple,
+        read: object,
+        step: float,
+        minimum: float,
+        maximum: float,
+        digits: int,
+    ) -> None:
+        self.title = title
+        self.zones = zones
+        self.row_names = row_names
+        self.read = read
+        self.step = step
+        self.minimum = minimum
+        self.maximum = maximum
+        self.digits = digits
 
 
 def wheel_values(slips: WheelSlips) -> tuple:
     return (slips.front_left, slips.front_right, slips.rear_left, slips.rear_right)
 
 
-def slip_text(wheel: str, slip: float) -> str:
-    return "{} {:.2f}".format(wheel, slip)
+GAUGES = (
+    Gauge(
+        "Slip ratio",
+        [Zone("lock", "Lock", (-1,), PURPLE), Zone("spin", "Spin", (1,), AMBER)],
+        WHEEL_NAMES,
+        lambda telemetry: wheel_values(telemetry.slip_ratios),
+        0.01,
+        0.01,
+        0.5,
+        2,
+    ),
+    Gauge(
+        "Slip angle",
+        [Zone("slip_angle", "Limit", (-1, 1), AMBER)],
+        WHEEL_NAMES,
+        lambda telemetry: wheel_values(telemetry.slip_angles),
+        0.5,
+        0.5,
+        30.0,
+        1,
+    ),
+    Gauge(
+        "Yaw rate",
+        [Zone("yaw_rate", "Limit", (-1, 1), AMBER)],
+        ("",),
+        lambda telemetry: (telemetry.yaw_rate,),
+        1.0,
+        1.0,
+        180.0,
+        1,
+    ),
+)
+
+settings = load_settings(SETTINGS_PATH)
+telemetry = idle_telemetry()
+listeners = []
+value_labels = []
 
 
-def draw_widget(settings: Settings, slips: WheelSlips) -> None:
-    bar = create_bar(settings)
-    color_ranges = [lock_range(settings.lock), spin_range(settings.spin)]
-    draw_gradient(bar, color_ranges)
-    draw_ticks(bar, color_ranges)
-    for row, slip in enumerate(wheel_values(slips)):
-        draw_marker_row(bar, ROWS_TOP + row * ROW_HEIGHT, ROW_HEIGHT, slip)
+def gauge_height(gauge: Gauge) -> float:
+    return (
+        BAR_HEIGHT
+        + ROWS_GAP
+        + len(gauge.row_names) * ROW_HEIGHT
+        + STEPPERS_GAP
+        + len(gauge.zones) * ZONE_HEIGHT
+    )
 
 
-def update_value_labels(labels: list, slips: WheelSlips) -> None:
-    for label, wheel, slip in zip(labels, WHEEL_NAMES, wheel_values(slips)):
-        ac.setText(label, slip_text(wheel, slip))
+def gauge_tops(gauges: tuple) -> list:
+    tops = [FIRST_TOP]
+    for gauge in gauges:
+        tops.append(tops[-1] + gauge_height(gauge))
+    return tops
+
+
+def rows_top(top: float) -> float:
+    return top + BAR_HEIGHT + ROWS_GAP
+
+
+def steppers_top(gauge: Gauge, top: float) -> float:
+    return rows_top(top) + len(gauge.row_names) * ROW_HEIGHT + STEPPERS_GAP
+
+
+def zone_ranges(zone: Zone, threshold: Threshold) -> list:
+    return [
+        ColorRange(side * threshold.start, side * threshold.end, GREY, zone.color)
+        for side in zone.sides
+    ]
+
+
+def color_ranges(gauge: Gauge, settings: Settings) -> list:
+    return [
+        color_range
+        for zone in gauge.zones
+        for color_range in zone_ranges(zone, getattr(settings, zone.kind))
+    ]
+
+
+def create_bar(gauge: Gauge, settings: Settings, top: float) -> Bar:
+    half = max(getattr(settings, zone.kind).end for zone in gauge.zones) * 1.25
+    return Bar(BAR_LEFT, top, BAR_WIDTH, BAR_HEIGHT, half)
+
+
+def number_text(value: float, digits: int) -> str:
+    return "{:.{}f}".format(value, digits)
+
+
+def value_text(name: str, value: float, digits: int) -> str:
+    return "{} {}".format(name, number_text(value, digits)).strip()
+
+
+def draw_gauge(gauge: Gauge, settings: Settings, values: tuple, top: float) -> None:
+    bar = create_bar(gauge, settings, top)
+    ranges = color_ranges(gauge, settings)
+    draw_gradient(bar, ranges)
+    draw_ticks(bar, ranges)
+    for row, value in enumerate(values):
+        draw_marker_row(bar, rows_top(top) + row * ROW_HEIGHT, ROW_HEIGHT, value)
+
+
+def update_value_labels(
+    labels: list, gauge: Gauge, values: tuple
+) -> None:
+    for label, name, value in zip(labels, gauge.row_names, values):
+        ac.setText(label, value_text(name, value, gauge.digits))
 
 
 def add_label(app_id: int, text: str, top: float) -> int:
@@ -88,12 +188,8 @@ def add_label(app_id: int, text: str, top: float) -> int:
     return label
 
 
-def threshold_text(value: float) -> str:
-    return "{:.2f}".format(value)
-
-
-def stepped(value: float, delta: float) -> float:
-    return round(min(THRESHOLD_MAX, max(THRESHOLD_MIN, value + delta)), 2)
+def stepped(value: float, delta: float, gauge: Gauge) -> float:
+    return round(min(gauge.maximum, max(gauge.minimum, value + delta)), gauge.digits)
 
 
 def add_text(
@@ -117,40 +213,69 @@ def add_button(
     return button
 
 
-def add_stepper(app_id: int, kind: str, field: str, left: float, top: float) -> None:
+def add_stepper(
+    app_id: int, gauge: Gauge, kind: str, field: str, left: float, top: float
+) -> None:
     add_text(app_id, field, left, top - 18, STEPPER_WIDTH, 12)
     value = getattr(getattr(settings, kind), field)
     value_label = add_text(
         app_id,
-        threshold_text(value),
+        number_text(value, gauge.digits),
         left + BUTTON_SIZE,
         top,
         STEPPER_WIDTH - 2 * BUTTON_SIZE,
         14,
     )
     for text, delta, offset in (
-        ("-", -STEP, 0),
-        ("+", STEP, STEPPER_WIDTH - BUTTON_SIZE),
+        ("-", -gauge.step, 0),
+        ("+", gauge.step, STEPPER_WIDTH - BUTTON_SIZE),
     ):
-        listener = threshold_listener(kind, field, delta, value_label)
+        listener = threshold_listener(gauge, kind, field, delta, value_label)
         listeners.append(listener)
         add_button(app_id, text, left + offset, top, listener)
 
 
-def threshold_listener(kind: str, field: str, delta: float, label: int) -> object:
-    return lambda x, y: on_threshold(kind, field, delta, label)
+def threshold_listener(
+    gauge: Gauge, kind: str, field: str, delta: float, label: int
+) -> object:
+    return lambda x, y: on_threshold(gauge, kind, field, delta, label)
 
 
-def on_threshold(kind: str, field: str, delta: float, label: int) -> None:
+def on_threshold(gauge: Gauge, kind: str, field: str, delta: float, label: int) -> None:
     threshold = getattr(settings, kind)
-    value = stepped(getattr(threshold, field), delta)
+    value = stepped(getattr(threshold, field), delta, gauge)
     setattr(threshold, field, value)
-    ac.setText(label, threshold_text(value))
+    ac.setText(label, number_text(value, gauge.digits))
     save_settings(settings, SETTINGS_PATH)
 
 
+def add_gauge(app_id: int, gauge: Gauge, top: float) -> list:
+    add_label(app_id, gauge.title, top + 2)
+    for row, zone in enumerate(gauge.zones):
+        zone_top = steppers_top(gauge, top) + row * ZONE_HEIGHT
+        add_label(app_id, zone.title, zone_top + 2)
+        for column, field in enumerate(("start", "end")):
+            add_stepper(
+                app_id,
+                gauge,
+                zone.kind,
+                field,
+                BAR_LEFT + column * (BAR_WIDTH - STEPPER_WIDTH),
+                zone_top,
+            )
+    return [
+        add_label(
+            app_id,
+            value_text(name, 0.0, gauge.digits),
+            rows_top(top) + row * ROW_HEIGHT,
+        )
+        for row, name in enumerate(gauge.row_names)
+    ]
+
+
 def render_widget(delta_time: float) -> None:
-    draw_widget(settings, wheel_slips)
+    for gauge, top in zip(GAUGES, gauge_tops(GAUGES)):
+        draw_gauge(gauge, settings, gauge.read(telemetry), top)
 
 
 def acMain(ac_version: str) -> str:
@@ -163,27 +288,16 @@ def acMain(ac_version: str) -> str:
 
 def create_app() -> str:
     app_id = ac.newApp(APP_NAME)
-    ac.setSize(app_id, BAR_LEFT + BAR_WIDTH + MARGIN, SPINNER_TOP + 90)
-    add_label(app_id, "Slip ratio", BAR_TOP + 2)
-    for row, wheel in enumerate(WHEEL_NAMES):
-        value_labels.append(
-            add_label(app_id, slip_text(wheel, 0.0), ROWS_TOP + row * ROW_HEIGHT)
-        )
-    for row, kind in enumerate(("lock", "spin")):
-        add_label(app_id, kind.capitalize(), SPINNER_TOP + row * 50 + 2)
-        for column, field in enumerate(("start", "end")):
-            add_stepper(
-                app_id,
-                kind,
-                field,
-                BAR_LEFT + column * (BAR_WIDTH - STEPPER_WIDTH),
-                SPINNER_TOP + row * 50,
-            )
+    tops = gauge_tops(GAUGES)
+    ac.setSize(app_id, BAR_LEFT + BAR_WIDTH + MARGIN, tops[-1] - MARGIN)
+    for gauge, top in zip(GAUGES, tops):
+        value_labels.append(add_gauge(app_id, gauge, top))
     ac.addRenderCallback(app_id, render_widget)
     return APP_NAME
 
 
 def acUpdate(delta_time: float) -> None:
-    global wheel_slips
-    wheel_slips = read_wheel_slips()
-    update_value_labels(value_labels, wheel_slips)
+    global telemetry
+    telemetry = read_telemetry()
+    for labels, gauge in zip(value_labels, GAUGES):
+        update_value_labels(labels, gauge, gauge.read(telemetry))

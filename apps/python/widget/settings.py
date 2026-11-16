@@ -8,20 +8,37 @@ class Threshold:
 
 
 class Settings:
-    def __init__(self, lock: Threshold, spin: Threshold) -> None:
+    def __init__(
+        self,
+        lock: Threshold,
+        spin: Threshold,
+        slip_angle: Threshold,
+        yaw_rate: Threshold,
+    ) -> None:
         self.lock = lock
         self.spin = spin
+        self.slip_angle = slip_angle
+        self.yaw_rate = yaw_rate
 
 
 def default_settings() -> Settings:
-    return Settings(Threshold(0.05, 0.1), Threshold(0.05, 0.1))
+    return Settings(
+        Threshold(0.05, 0.1),
+        Threshold(0.05, 0.1),
+        Threshold(6.0, 10.0),
+        Threshold(30.0, 60.0),
+    )
 
 
 def load_settings(path: str) -> Settings:
     try:
         with open(path) as file:
             raw = json.load(file)
-        return Settings(**{kind: Threshold(**values) for kind, values in raw.items()})
+        thresholds = vars(default_settings())
+        thresholds.update(
+            {kind: Threshold(**values) for kind, values in raw.items()}
+        )
+        return Settings(**thresholds)
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return default_settings()
 
