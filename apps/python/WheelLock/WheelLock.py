@@ -1,11 +1,9 @@
 # Wheel-slip widget for Assetto Corsa: four tyres, colour = each tyre's slip ratio as AC's
 # physics reports it (acsys.CS.SlipRatio). Negative = locking, positive = spinning.
-# Dotted line = the car's own axis, nose to tail. Solid line with the arrow head = the
-# direction of travel through the car centre (body slip angle). Lines together = car goes
-# where it points; solid line tilted = car is rotating/sliding, head points the way to
-# countersteer. Colour works like the tyres: grey up to start, grey->red to full.
+# Dotted line = the car's own axis, nose to tail. Arrow on it = body slip angle (car travels
+# off its nose): grey up to rotate start, grey->red to full, held like the tyres.
 # White lines above the front tyres and below the rear ones = each tyre's slip angle
-# (acsys.CS.SlipAngle), tyre-wide. Hidden up to angle start, grey->white to full, held like
+# (acsys.CS.SlipAngle), tyre-wide. Grey up to angle start, grey->white to full, held like
 # the tyres.
 # A second window ("WheelLock Settings") shows the live signals, the colour curves and the
 # thresholds, and lets you edit them. Open it with the sliders button on the widget.
@@ -152,7 +150,6 @@ WHITE = (1.0, 1.0, 1.0, 1.0)
 FAINT = (1.0, 1.0, 1.0, 0.15)   # empty track behind a live marker
 AXIS = (1.0, 1.0, 1.0, 0.3)     # dotted car axis on the widget
 SLIP_LINE = (0.9, 0.9, 0.9, 0.85)  # tyre slip angle line at full
-HIDDEN = (0.0, 0.0, 0.0, 0.0)      # slip angle line below start
 BUTTON_ON = (1.0, 1.0, 1.0, 0.7)
 BUTTON_OFF = (1.0, 1.0, 1.0, 0.2)  # at min/max scale
 
@@ -183,18 +180,19 @@ WHEELS = ("FL", "FR", "RL", "RR")
 # Exactly what acUpdate does, shown in the settings window.
 RULES = (
     "every frame, focused car:",
-    "  SpeedKMH < min speed            -> all tyres grey, arrow grey and straight up",
+    "  SpeedKMH < min speed            -> everything grey",
     "  SlipRatio < 0 (lock):  |s| <= start grey, start..full grey->purple, >= full purple",
     "  SlipRatio > 0 (spin):  |s| <= start grey, start..full grey->amber,  >= full amber",
-    "  SlipAngle (angle):     |a| <= start no line, start..full grey->white, >= full white",
-    "  beta = atan2(-x, z) of LocalVelocity, + = travelling right of the nose, arrow tilts",
+    "  SlipAngle (angle):     |a| <= start grey, start..full grey->white,  >= full white",
+    "  beta = atan2(-x, z) of LocalVelocity, + = travelling right of the nose",
     "  beta (rotate):         |b| <= start grey, start..full grey->red,    >= full red",
     "  |value| >= full and speed >= min -> that colour stays for hold ms",
 )
 
-IDLE = State(speed=0.0, slips=(0.0,) * 4, angles=(0.0,) * 4, angles_shown=(HIDDEN,) * 4,
-             angle_holds=(Hold(0.0, HIDDEN),) * 4, shown=(GREY,) * 4,
-             holds=(Hold(0.0, GREY),) * 4, velocity=(0.0, 0.0, 0.0), beta=0.0, beta_shown=GREY, beta_hold=Hold(0.0, GREY))
+IDLE = State(speed=0.0, slips=(0.0,) * 4, angles=(0.0,) * 4, angles_shown=(GREY,) * 4,
+             angle_holds=(Hold(0.0, GREY),) * 4, shown=(GREY,) * 4,
+             holds=(Hold(0.0, GREY),) * 4, velocity=(0.0, 0.0, 0.0), beta=0.0,
+             beta_shown=GREY, beta_hold=Hold(0.0, GREY))
 
 
 # --- math ---------------------------------------------------------------------
@@ -240,10 +238,8 @@ def beta_color(beta: float, settings: Settings) -> tuple:
 
 
 def angle_color(angle: float, settings: Settings) -> tuple:
-    """Tyre SlipAngle (deg) -> hidden up to start, then the same ramp as the tyres to white."""
+    """Tyre SlipAngle (deg) -> colour through the angle thresholds, same ramp as the tyres."""
     start, full = settings.angle
-    if abs(angle) <= start:
-        return HIDDEN
     return ramp(abs(angle), start, full, SLIP_LINE)
 
 
@@ -280,7 +276,7 @@ def angle_step(angle: float, speed: float, previous: Hold, delta: float,
                settings: Settings) -> tuple:
     """-> (colour to show, new Hold) for one tyre's slip angle line this frame."""
     moving = speed >= settings.min_speed
-    color = angle_color(angle, settings) if moving else HIDDEN
+    color = angle_color(angle, settings) if moving else GREY
     at_full = moving and abs(angle) >= settings.angle[1]
     return hold(color, at_full, previous, delta, settings.hold_ms / 1000.0)
 
@@ -463,14 +459,11 @@ def draw_car_axis(center: tuple, reach: float, scale: float) -> None:
         dash_top += dash * 2  # gap = dash
 
 
-def draw_travel(center: tuple, reach: float, beta: float, color: tuple, scale: float) -> None:
-    """Solid arrow through the car centre, rotated by beta, head at the front end."""
-    angle = math.radians(max(-90.0, min(90.0, beta)))  # past 90 deg it's a spin; red says enough
-    offset_x, offset_y = reach * math.sin(angle), reach * math.cos(angle)
+def draw_travel(center: tuple, reach: float, color: tuple, scale: float) -> None:
+    """Solid arrow along the car axis, head at the front end."""
     center_x, center_y = center
     ac.glColor4f(*color)
-    draw_arrow((center_x - offset_x, center_y + offset_y),
-               (center_x + offset_x, center_y - offset_y), 3 * scale)
+    draw_arrow((center_x, center_y + reach), (center_x, center_y - reach), 3 * scale)
 
 
 def draw_slip_angles(tyres: list, colors: tuple, scale: float) -> None:
@@ -499,7 +492,7 @@ def draw_widget(layout: Layout, state: State, settings: Settings) -> None:
         ac.glQuad(*tyre)
     draw_slip_angles(layout.tyres, state.angles_shown, scale)
     draw_car_axis(layout.center, layout.reach, scale)
-    draw_travel(layout.center, layout.reach, state.beta, state.beta_shown, scale)
+    draw_travel(layout.center, layout.reach, state.beta_shown, scale)
     draw_buttons(layout.buttons, scale)
 
 
