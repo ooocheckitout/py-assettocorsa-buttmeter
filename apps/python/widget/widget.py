@@ -9,8 +9,8 @@ for module_name, module in list(sys.modules.items()):
         del sys.modules[module_name]
 
 from settings import load_settings
-from apps.settings_application import SettingsApplication
-from apps.widget_application import WidgetApplication
+from apps.settings import SettingsApplication
+from apps.widget import WidgetApplication
 
 # The app should be installed to: apps\python\{self.name}\{self.name}.py
 # The icon is taken from: content\gui\icons\{self.name}_{ON,OFF}.png
