@@ -21,7 +21,7 @@ class SettingsApplication:
                 title="Slip ratio",
                 names=("FL", "FR", "RL", "RR"),
                 read=lambda snapshot: [
-                    wheel.slip_ratio for wheel in snapshot.ordered_wheels()
+                    wheel.slip_ratio for wheel in snapshot.wheels
                 ],
                 step=0.01,
                 digits=2,
@@ -36,7 +36,7 @@ class SettingsApplication:
                 title="Slip angle",
                 names=("FL", "FR", "RL", "RR"),
                 read=lambda snapshot: [
-                    wheel.slip_angle for wheel in snapshot.ordered_wheels()
+                    wheel.slip_angle for wheel in snapshot.wheels
                 ],
                 step=0.5,
                 digits=1,

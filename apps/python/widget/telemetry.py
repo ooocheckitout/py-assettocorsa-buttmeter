@@ -23,20 +23,10 @@ class Rotation:
 
 
 class Snapshot:
-    def __init__(
-        self, speed: float, wheels: Wheels, angular_velocity: Rotation
-    ) -> None:
+    def __init__(self, speed: float, wheels: list, angular_velocity: Rotation) -> None:
         self.speed = speed
         self.wheels = wheels
         self.angular_velocity = angular_velocity
-
-    def ordered_wheels(self) -> tuple:
-        return (
-            self.wheels.front_left,
-            self.wheels.front_right,
-            self.wheels.rear_left,
-            self.wheels.rear_right,
-        )
 
 
 def read_snapshot() -> Snapshot:
@@ -45,6 +35,6 @@ def read_snapshot() -> Snapshot:
     angles = ac.getCarState(car, acsys.CS.SlipAngle)
     return Snapshot(
         ac.getCarState(car, acsys.CS.SpeedKMH),
-        Wheels(*[Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)]),
+        [Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)],
         Rotation(*ac.getCarState(car, acsys.CS.LocalAngularVelocity)),
     )

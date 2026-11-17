@@ -38,6 +38,18 @@ class Point:
         self.y = y
 
 
+class Position:
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+
+class Size:
+    def __init__(self, width: float, height: float) -> None:
+        self.width = width
+        self.height = height
+
+
 class Slot:
     def __init__(self, left: float, top: float, width: float, height: float) -> None:
         self.left = left

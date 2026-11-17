@@ -1,6 +1,13 @@
 import os, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+app_directory = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, app_directory)
+
+# CSP reload re-runs this file in the same interpreter; cached submodules would keep old code.
+for module_name, module in list(sys.modules.items()):
+    if module_name != __name__ and os.path.abspath(getattr(module, "__file__", None) or "").startswith(app_directory + os.sep):
+        del sys.modules[module_name]
+
 from settings import load_settings
 from apps.settings_application import SettingsApplication
 from apps.widget_application import WidgetApplication
