@@ -1,12 +1,15 @@
-from application import Application
-from gauge_component import Gauge, GaugeComponent
+import ac
+
+from components.gauge_component import Gauge, GaugeComponent
 from render import Color, Slot
 from settings import Settings
+from telemetry import read_snapshot
 
 
-class SettingsApplication(Application):
+class SettingsApplication:
     def __init__(self, settings: Settings) -> None:
-        super().__init__("widget settings")
+        self.id = ac.newApp("widget settings")
+        self.components = []
 
         top = 40
         for gauge in (
@@ -54,9 +57,16 @@ class SettingsApplication(Application):
                 positive_title="Limit",
             ),
         ):
-            component = self.add(
-                GaugeComponent(self.id, Slot(10, top, 345, 0), gauge, settings)
-            )
+            component = GaugeComponent(self.id, Slot(10, top, 345, 0), gauge, settings)
+            self.components.append(component)
             top += component.height
 
-        self.resize(365, top - 10)
+        ac.setSize(self.id, 365, top - 10)
+        # AC does not hold a reference to callbacks, so keep the bound method alive
+        self.callback = self.render
+        ac.addRenderCallback(self.id, self.callback)
+
+    def render(self, _: float) -> None:
+        snapshot = read_snapshot()
+        for component in self.components:
+            component.update(snapshot)
