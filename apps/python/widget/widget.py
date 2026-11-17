@@ -260,7 +260,7 @@ def acMain(_: str) -> str:
     name = "widget"
     app_id = ac.newApp(name)
 
-    ac.setSize(app_id, 240, 320)
+    ac.setSize(app_id, 240, 360)
     ac.setTitle(app_id, "")
     ac.setIconPosition(app_id, 0, -10000)
     ac.setBackgroundOpacity(app_id, 0.025)
@@ -268,7 +268,7 @@ def acMain(_: str) -> str:
 
     components = (
         TiresComponent(
-            slot=Slot(20, 40, 200, 240),
+            slot=Slot(20, 60, 200, 240),
             track_gap=90,
             axle_gap=70,
             style=TireStyle(
@@ -280,7 +280,7 @@ def acMain(_: str) -> str:
             ),
         ),
         RotationComponent(
-            slot=Slot(105, 55, 30, 210),
+            slot=Slot(105, 75, 30, 210),
             length=210,
             thickness=9,
             threshold=Threshold(0.2, 0.6, Color.grey, Color.red),
