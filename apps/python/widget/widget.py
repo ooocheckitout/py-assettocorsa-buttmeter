@@ -35,7 +35,8 @@ class Snapshot:
         self.angular_velocity = angular_velocity
 
 
-def read_snapshot(car: int) -> Snapshot:
+def read_snapshot() -> Snapshot:
+    car = ac.getFocusedCar()
     speed = ac.getCarState(car, acsys.CS.SpeedKMH)
 
     ratios = ac.getCarState(car, acsys.CS.SlipRatio)
@@ -49,50 +50,58 @@ def read_snapshot(car: int) -> Snapshot:
 
 
 class Component:
-    def update(self) -> None:
-        pass
-
-    def render(self) -> None:
-        pass
-
-    def shutdown(self) -> None:
+    def update(self, snapshot: Snapshot) -> None:
         pass
 
 
-components = []
+class SlipRatioComponent(Component):
+    def __init__(
+        self, left: float, top: float, size: float, gap: float, limit: float
+    ) -> None:
+        self.left = left
+        self.top = top
+        self.size = size
+        self.gap = gap
+        self.limit = limit
+
+    def update(self, wheels: Wheels) -> None:
+        cells = (
+            (0, 0, wheels.front_left),
+            (1, 0, wheels.front_right),
+            (0, 1, wheels.rear_left),
+            (1, 1, wheels.rear_right),
+        )
+        step = self.size + self.gap
+        for column, row, wheel in cells:
+            level = min(abs(wheel.slip_ratio) / self.limit, 1.0)
+            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            ac.glQuad(
+                self.left + column * step, self.top + row * step, self.size, self.size
+            )
 
 
-def render_all(delta_time: float) -> None:
-    ac.log("render_all {}".format(delta_time))
+components = ()
+
+
+def render_all(_: float) -> None:
+    """Runs on every frame after window is drawn."""
+    snapshot = read_snapshot()
 
     for component in components:
-        component.render()
+        component.update(snapshot.wheels)
 
 
-def acMain(ac_version: str) -> str:
+def acMain(_: str) -> str:
     """Runs once the session is loaded."""
-    ac.log("acMain {}".format(ac_version))
+    global components
 
     name = "widget"
     app_id = ac.newApp(name)
 
     ac.setSize(app_id, 600, 800)
+
+    components = (SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),)
+
     ac.addRenderCallback(app_id, render_all)
 
     return name
-
-
-def acUpdate(delta_time_sec: float) -> None:
-    """Runs every frame for the whole session."""
-    ac.log("acUpdate {}".format(delta_time_sec))
-
-    for component in components:
-        component.update()
-
-
-def acShutdown() -> None:
-    """Runs once when the session ends normally."""
-    ac.log("acShutdown")
-
-    for component in components:
-        component.shutdown()
