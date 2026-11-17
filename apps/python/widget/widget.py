@@ -51,6 +51,24 @@ def read_snapshot() -> Snapshot:
     return Snapshot(speed, wheels, rotation)
 
 
+class Threshold:
+    def __init__(self, start: float, end: float) -> None:
+        self.start = start
+        self.end = end
+
+
+def intensity(value: float, threshold: Threshold) -> float:
+    span = threshold.end - threshold.start
+    return max(0.0, min((abs(value) - threshold.start) / span, 1.0))
+
+
+def indicator_color(level: float) -> None:
+    if level == 0.0:
+        ac.glColor4f(0.2, 0.2, 0.2, 1.0)
+    else:
+        ac.glColor4f(1.0, 0.8 * (1.0 - level), 0.0, 1.0)
+
+
 class Component:
     def update(self, snapshot: Snapshot) -> None:
         pass
@@ -58,13 +76,13 @@ class Component:
 
 class SlipRatioComponent(Component):
     def __init__(
-        self, left: float, top: float, size: float, gap: float, limit: float
+        self, left: float, top: float, size: float, gap: float, threshold: Threshold
     ) -> None:
         self.left = left
         self.top = top
         self.size = size
         self.gap = gap
-        self.limit = limit
+        self.threshold = threshold
 
     def update(self, snapshot: Snapshot) -> None:
         cells = (
@@ -75,8 +93,7 @@ class SlipRatioComponent(Component):
         )
         step = self.size + self.gap
         for column, row, wheel in cells:
-            level = min(abs(wheel.slip_ratio) / self.limit, 1.0)
-            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            indicator_color(intensity(wheel.slip_ratio, self.threshold))
             ac.glQuad(
                 self.left + column * step, self.top + row * step, self.size, self.size
             )
@@ -84,13 +101,13 @@ class SlipRatioComponent(Component):
 
 class SlipAngleComponent(Component):
     def __init__(
-        self, left: float, top: float, size: float, gap: float, limit: float
+        self, left: float, top: float, size: float, gap: float, threshold: Threshold
     ) -> None:
         self.left = left
         self.top = top
         self.size = size
         self.gap = gap
-        self.limit = limit
+        self.threshold = threshold
 
     def update(self, snapshot: Snapshot) -> None:
         cells = (
@@ -100,20 +117,10 @@ class SlipAngleComponent(Component):
             (1, 1, snapshot.wheels.rear_right),
         )
         step = self.size + self.gap
-        half = self.size / 2
         for column, row, wheel in cells:
-            cell_left = self.left + column * step
-            cell_top = self.top + row * step
-            ratio = max(-1.0, min(wheel.slip_angle / self.limit, 1.0))
-            level = abs(ratio)
-            offset = ratio * half
-
-            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
-            ac.glQuad(cell_left, cell_top, self.size, self.size)
-
-            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            indicator_color(intensity(wheel.slip_ratio, self.threshold))
             ac.glQuad(
-                cell_left + half + min(offset, 0.0), cell_top, abs(offset), self.size
+                self.left + column * step, self.top + row * step, self.size, self.size
             )
 
 
@@ -125,14 +132,14 @@ class RotationRateComponent(Component):
         width: float,
         height: float,
         gap: float,
-        limit: float,
+        threshold: Threshold,
     ) -> None:
         self.left = left
         self.top = top
         self.width = width
         self.height = height
         self.gap = gap
-        self.limit = limit
+        self.threshold = threshold
 
     def update(self, snapshot: Snapshot) -> None:
         rotation = snapshot.angular_velocity
@@ -141,17 +148,13 @@ class RotationRateComponent(Component):
         half = self.width / 2
         for row, value in enumerate(axes):
             bar_top = self.top + row * step
-            ratio = max(-1.0, min(value / self.limit, 1.0))
-            level = abs(ratio)
-            offset = ratio * half
-
-            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
+            level = intensity(value, self.threshold)
+            indicator_color(0.0)
             ac.glQuad(self.left, bar_top, self.width, self.height)
-
-            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
-            ac.glQuad(
-                self.left + half + min(offset, 0.0), bar_top, abs(offset), self.height
-            )
+            if level > 0.0:
+                indicator_color(level)
+                bar_left = self.left + half if value > 0 else self.left
+                ac.glQuad(bar_left, bar_top, half, self.height)
 
 
 class FrictionCircleComponent(Component):
@@ -163,6 +166,7 @@ class FrictionCircleComponent(Component):
         gap: float,
         ratio_limit: float,
         angle_limit: float,
+        threshold: Threshold,
     ) -> None:
         self.left = left
         self.top = top
@@ -170,6 +174,18 @@ class FrictionCircleComponent(Component):
         self.gap = gap
         self.ratio_limit = ratio_limit
         self.angle_limit = angle_limit
+        self.threshold = threshold
+
+    def draw_ring(self, center_x: float, center_y: float, radius: float) -> None:
+        segments = 32
+        ac.glColor4f(0.6, 0.6, 0.6, 1.0)
+        ac.glBegin(acsys.GL.LineStrip)
+        for index in range(segments + 1):
+            angle = 2 * math.pi * index / segments
+            ac.glVertex2f(
+                center_x + math.cos(angle) * radius, center_y + math.sin(angle) * radius
+            )
+        ac.glEnd()
 
     def update(self, snapshot: Snapshot) -> None:
         cells = (
@@ -189,32 +205,16 @@ class FrictionCircleComponent(Component):
             longitudinal = wheel.slip_ratio / self.ratio_limit
             usage = math.hypot(lateral, longitudinal)
             scale = min(usage, half / radius) / usage if usage > 0 else 0.0
-            level = min(usage, 1.0)
 
-            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
-            ac.glQuad(center_x - half, center_y - half, self.size, self.size)
+            self.draw_ring(center_x, center_y, radius)
 
-            draw_ring(center_x, center_y, radius)
-
-            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            indicator_color(intensity(usage, self.threshold))
             ac.glQuad(
                 center_x + lateral * scale * radius - dot / 2,
                 center_y - longitudinal * scale * radius - dot / 2,
                 dot,
                 dot,
             )
-
-
-def draw_ring(center_x: float, center_y: float, radius: float) -> None:
-    segments = 32
-    ac.glColor4f(0.6, 0.6, 0.6, 1.0)
-    ac.glBegin(acsys.GL.LineStrip)
-    for index in range(segments + 1):
-        angle = 2 * math.pi * index / segments
-        ac.glVertex2f(
-            center_x + math.cos(angle) * radius, center_y + math.sin(angle) * radius
-        )
-    ac.glEnd()
 
 
 components = ()
@@ -238,13 +238,28 @@ def acMain(_: str) -> str:
     ac.setSize(app_id, 600, 800)
 
     components = (
-        SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),
-        SlipAngleComponent(left=10, top=250, size=90, gap=10, limit=8.0),
+        SlipRatioComponent(
+            left=10, top=40, size=90, gap=10, threshold=Threshold(0.10, 0.20)
+        ),
+        SlipAngleComponent(
+            left=10, top=250, size=90, gap=10, threshold=Threshold(6.0, 10.0)
+        ),
         RotationRateComponent(
-            left=10, top=460, width=190, height=40, gap=10, limit=1.0
+            left=10,
+            top=460,
+            width=190,
+            height=40,
+            gap=10,
+            threshold=Threshold(0.6, 1.2),
         ),
         FrictionCircleComponent(
-            left=220, top=40, size=190, gap=10, ratio_limit=0.15, angle_limit=8.0
+            left=220,
+            top=40,
+            size=190,
+            gap=10,
+            ratio_limit=0.15,
+            angle_limit=8.0,
+            threshold=Threshold(0.85, 1.1),
         ),
     )
 
