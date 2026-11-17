@@ -1,5 +1,4 @@
 import ac, acsys
-import math
 
 from abc import ABCMeta, abstractmethod
 
@@ -40,16 +39,13 @@ class Snapshot:
 
 def read_snapshot() -> Snapshot:
     car = ac.getFocusedCar()
-    speed = ac.getCarState(car, acsys.CS.SpeedKMH)
-
     ratios = ac.getCarState(car, acsys.CS.SlipRatio)
     angles = ac.getCarState(car, acsys.CS.SlipAngle)
-    wheels = Wheels(*[Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)])
-
-    pitch, yaw, roll = ac.getCarState(car, acsys.CS.LocalAngularVelocity)
-    rotation = Rotation(pitch, yaw, roll)
-
-    return Snapshot(speed, wheels, rotation)
+    return Snapshot(
+        ac.getCarState(car, acsys.CS.SpeedKMH),
+        Wheels(*[Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)]),
+        Rotation(*ac.getCarState(car, acsys.CS.LocalAngularVelocity)),
+    )
 
 
 class Color:
@@ -58,8 +54,16 @@ class Color:
         self.green = green
         self.blue = blue
 
+    def mix(self, other: "Color", level: float) -> "Color":
+        return Color(
+            self.red + (other.red - self.red) * level,
+            self.green + (other.green - self.green) * level,
+            self.blue + (other.blue - self.blue) * level,
+        )
+
 
 Color.grey = Color(0.2, 0.2, 0.2)
+Color.silver = Color(0.5, 0.5, 0.5)
 Color.red = Color(1.0, 0.0, 0.0)
 Color.purple = Color(0.6, 0.0, 1.0)
 Color.amber = Color(1.0, 0.75, 0.0)
@@ -75,26 +79,9 @@ class Threshold:
         self.start_color = start_color
         self.end_color = end_color
 
-
-def intensity(value: float, threshold: Threshold) -> float:
-    span = threshold.end - threshold.start
-    return max(0.0, min((abs(value) - threshold.start) / span, 1.0))
-
-
-def mix(low: float, high: float, level: float) -> float:
-    return low + (high - low) * level
-
-
-def indicator_color(value: float, threshold: Threshold) -> None:
-    level = intensity(value, threshold)
-    low = threshold.start_color
-    high = threshold.end_color
-    ac.glColor4f(
-        mix(low.red, high.red, level),
-        mix(low.green, high.green, level),
-        mix(low.blue, high.blue, level),
-        1.0,
-    )
+    def color(self, value: float) -> Color:
+        level = (abs(value) - self.start) / (self.end - self.start)
+        return self.start_color.mix(self.end_color, max(0.0, min(level, 1.0)))
 
 
 class Point:
@@ -111,43 +98,41 @@ class Slot:
         self.height = height
 
 
-def draw_shape(mode: int, points: list) -> None:
-    ac.glBegin(mode)
-    for point in points:
-        ac.glVertex2f(point.x, point.y)
-    ac.glEnd()
-
-
 class Component(metaclass=ABCMeta):
     @abstractmethod
     def update(self, snapshot: Snapshot) -> None:
         pass
 
     @staticmethod
-    def fill(slot: Slot, value: float, threshold: Threshold) -> None:
-        indicator_color(value, threshold)
+    def paint(color: Color) -> None:
+        ac.glColor4f(color.red, color.green, color.blue, 1.0)
+
+    @staticmethod
+    def fill(slot: Slot, color: Color) -> None:
+        Component.paint(color)
         ac.glQuad(slot.left, slot.top, slot.width, slot.height)
 
     @staticmethod
-    def equal(total: float, count: int, gap: float) -> list:
-        return [(total - gap * (count - 1)) / count] * count
+    def triangle(points: list, color: Color) -> None:
+        Component.paint(color)
+        ac.glBegin(acsys.GL.Triangles)
+        for point in points:
+            ac.glVertex2f(point.x, point.y)
+        ac.glEnd()
 
     @staticmethod
-    def stack(area: Slot, heights: list, gap: float) -> list:
-        slots = []
-        top = area.top
-        for height in heights:
-            slots.append(Slot(area.left, top, area.width, height))
-            top += height + gap
-        return slots
+    def grid(area: Slot, columns: int, rows: int, gap: float) -> list:
+        width = (area.width - gap * (columns - 1)) / columns
+        height = (area.height - gap * (rows - 1)) / rows
 
-    @staticmethod
-    def row(area: Slot, widths: list, gap: float) -> list:
         slots = []
-        left = area.left
-        for width in widths:
-            slots.append(Slot(left, area.top, width, area.height))
-            left += width + gap
+
+        for row in range(rows):
+            for column in range(columns):
+                x = area.left + column * (width + gap)
+                y = area.top + row * (height + gap)
+                slots.append(Slot(x, y, width, height))
+
         return slots
 
 
@@ -175,24 +160,21 @@ class TiresComponent(Component):
 
     def draw_tire(self, slot: Slot, wheel: Wheel, line_below: bool) -> None:
         style = self.style
-        ratio_threshold = (
-            style.lock_threshold if wheel.slip_ratio < 0 else style.spin_threshold
-        )
-        self.fill(slot, wheel.slip_ratio, ratio_threshold)
+        ratio = style.lock_threshold if wheel.slip_ratio < 0 else style.spin_threshold
+        self.fill(slot, ratio.color(wheel.slip_ratio))
         line_top = (
             slot.top + slot.height + style.spacing
             if line_below
             else slot.top - style.spacing - style.line
         )
         line_slot = Slot(slot.left, line_top, slot.width, style.line)
-        self.fill(line_slot, wheel.slip_angle, style.angle_threshold)
+        self.fill(line_slot, style.angle_threshold.color(wheel.slip_angle))
 
     def update(self, snapshot: Snapshot) -> None:
         wheels = snapshot.wheels
-        gap = self.gap
-        front, rear = self.stack(self.slot, self.equal(self.slot.height, 2, gap), gap)
-        front_left, front_right = self.row(front, self.equal(front.width, 2, gap), gap)
-        rear_left, rear_right = self.row(rear, self.equal(rear.width, 2, gap), gap)
+        (front_left, front_right), (rear_left, rear_right) = self.grid(
+            self.slot, 2, 2, self.gap
+        )
         self.draw_tire(front_left, wheels.front_left, False)
         self.draw_tire(front_right, wheels.front_right, False)
         self.draw_tire(rear_left, wheels.rear_left, True)
@@ -215,35 +197,32 @@ class RotationComponent(Component):
         self.threshold = threshold
 
     def draw_center_line(self, middle: float) -> None:
-        ac.glColor4f(0.5, 0.5, 0.5, 1.0)
         bottom = self.slot.top + self.slot.height
-        for index in range(math.ceil(self.slot.height / (2 * self.dash))):
-            dash_top = self.slot.top + index * 2 * self.dash
+        dash_top = self.slot.top
+        while dash_top < bottom:
             height = min(self.dash, bottom - dash_top)
-            ac.glQuad(middle - 1, dash_top, 2, height)
+            self.fill(Slot(middle - 1, dash_top, 2, height), Color.silver)
+            dash_top += 2 * self.dash
 
     def update(self, snapshot: Snapshot) -> None:
         middle = self.slot.left + self.slot.width / 2
         self.draw_center_line(middle)
 
-        indicator_color(snapshot.angular_velocity.yaw, self.threshold)
-
+        color = self.threshold.color(snapshot.angular_velocity.yaw)
         top = self.slot.top + (self.slot.height - self.length) / 2
         head = self.thickness * 3
         neck = top + head
-        ac.glQuad(
-            middle - self.thickness / 2,
-            neck,
-            self.thickness,
-            self.length - head,
+        shaft = Slot(
+            middle - self.thickness / 2, neck, self.thickness, self.length - head
         )
-        draw_shape(
-            acsys.GL.Triangles,
+        self.fill(shaft, color)
+        self.triangle(
             [
                 Point(middle - head / 2, neck),
                 Point(middle + head / 2, neck),
                 Point(middle, top),
             ],
+            color,
         )
 
 
