@@ -97,27 +97,6 @@ def indicator_color(value: float, threshold: Threshold) -> None:
     )
 
 
-def axis_bar(
-    left: float,
-    top: float,
-    width: float,
-    height: float,
-    value: float,
-    threshold: Threshold,
-) -> None:
-    indicator_color(0.0, threshold)
-    ac.glQuad(left, top, width, height)
-    if intensity(value, threshold) == 0.0:
-        return
-    indicator_color(value, threshold)
-    if width >= height:
-        half = width / 2
-        ac.glQuad(left + half if value > 0 else left, top, half, height)
-    else:
-        half = height / 2
-        ac.glQuad(left, top + half if value > 0 else top, width, half)
-
-
 class Point:
     def __init__(self, x: float, y: float) -> None:
         self.x = x
@@ -170,34 +149,6 @@ class Component(metaclass=ABCMeta):
             slots.append(Slot(left, area.top, width, area.height))
             left += width + gap
         return slots
-
-
-class RotationRateComponent(Component):
-    def __init__(
-        self,
-        left: float,
-        top: float,
-        width: float,
-        height: float,
-        gap: float,
-        threshold: Threshold,
-    ) -> None:
-        self.left = left
-        self.top = top
-        self.width = width
-        self.height = height
-        self.gap = gap
-        self.threshold = threshold
-
-    def update(self, snapshot: Snapshot) -> None:
-        rotation = snapshot.angular_velocity
-        axes = (rotation.pitch, rotation.yaw, rotation.roll)
-        step = self.height + self.gap
-        for row, value in enumerate(axes):
-            bar_top = self.top + row * step
-            axis_bar(
-                self.left, bar_top, self.width, self.height, value, self.threshold
-            )
 
 
 class TireStyle:
@@ -317,14 +268,6 @@ def acMain(_: str) -> str:
     ac.setSize(app_id, 600, 800)
 
     components = (
-        RotationRateComponent(
-            left=10,
-            top=460,
-            width=190,
-            height=40,
-            gap=10,
-            threshold=Threshold(0.6, 1.2, Color.grey, Color.red),
-        ),
         TiresComponent(
             slot=Slot(250, 40, 160, 220),
             gap=40,
