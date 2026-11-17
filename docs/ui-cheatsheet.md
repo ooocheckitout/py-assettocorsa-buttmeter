@@ -146,7 +146,7 @@ No events.
 |---|---|---|---|
 | `glColor4f(r, g, b, a)` / `glColor3f(r, g, b)` | floats | 1/-1 | Colour for the shapes drawn next. |
 | `glQuad(x, y, w, h)` | px, relative to the window | 1/-1 | Filled rectangle. |
-| `glBegin(mode)` | `acsys.GL.Lines`, `LineStrip`, `Triangles`, `Quads` | 1/-1 | Starts a primitive. |
+| `glBegin(mode)` | `acsys.GL.Lines`, `LineStrip`, `Triangles`, `Quads` | 1/-1 | Starts a primitive. Max 32 vertices per `glBegin`/`glEnd`; more logs `GLRenderer::vertex3f currentIndex> 32` in `log.txt` and draws nothing. |
 | `glVertex2f(x, y)` | px | 1/-1 | Adds a vertex. |
 | `glEnd()` | | 1/-1 | Finishes and draws the primitive. |
 | `newTexture(path)` | PNG path relative to AC root | texture id, or -1 | Loads an image. Call once, outside the render callback. |

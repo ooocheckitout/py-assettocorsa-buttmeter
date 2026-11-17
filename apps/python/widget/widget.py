@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
-
 import ac, acsys
+
+from abc import ABCMeta, abstractmethod
 
 # The app should be installed to: apps\python\{self.name}\{self.name}.py
 # The icon is taken from: content\gui\icons\{self.name}_{ON,OFF}.png
@@ -69,7 +69,7 @@ def indicator_color(level: float) -> None:
         ac.glColor4f(1.0, 0.8 * (1.0 - level), 0.0, 1.0)
 
 
-class Component(ABC):
+class Component(metaclass=ABCMeta):
     @abstractmethod
     def update(self, snapshot: Snapshot) -> None:
         pass
@@ -158,6 +158,50 @@ class RotationRateComponent(Component):
                 ac.glQuad(bar_left, bar_top, half, self.height)
 
 
+class TireStateComponent(Component):
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        width: float,
+        height: float,
+        gap: float,
+        line: float,
+        spacing: float,
+        ratio_threshold: Threshold,
+        angle_threshold: Threshold,
+    ) -> None:
+        self.left = left
+        self.top = top
+        self.width = width
+        self.height = height
+        self.gap = gap
+        self.line = line
+        self.spacing = spacing
+        self.ratio_threshold = ratio_threshold
+        self.angle_threshold = angle_threshold
+
+    def update(self, snapshot: Snapshot) -> None:
+        cells = (
+            (0, 0, snapshot.wheels.front_left),
+            (1, 0, snapshot.wheels.front_right),
+            (0, 1, snapshot.wheels.rear_left),
+            (1, 1, snapshot.wheels.rear_right),
+        )
+        for column, row, wheel in cells:
+            left = self.left + column * (self.width + self.gap)
+            top = self.top + row * (self.height + self.gap)
+            indicator_color(intensity(wheel.slip_ratio, self.ratio_threshold))
+            ac.glQuad(left, top, self.width, self.height)
+            line_top = (
+                top - self.spacing - self.line
+                if row == 0
+                else top + self.height + self.spacing
+            )
+            indicator_color(intensity(wheel.slip_angle, self.angle_threshold))
+            ac.glQuad(left, line_top, self.width, self.line)
+
+
 components = ()
 
 
@@ -192,6 +236,17 @@ def acMain(_: str) -> str:
             height=40,
             gap=10,
             threshold=Threshold(0.6, 1.2),
+        ),
+        TireStateComponent(
+            left=250,
+            top=40,
+            width=60,
+            height=90,
+            gap=40,
+            line=12,
+            spacing=6,
+            ratio_threshold=Threshold(0.10, 0.20),
+            angle_threshold=Threshold(6.0, 10.0),
         ),
     )
 
