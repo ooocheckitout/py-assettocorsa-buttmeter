@@ -1,10 +1,15 @@
 import json
+import os
 
 
 class Threshold:
     def __init__(self, start: float, end: float) -> None:
-        self.start = float(start)
-        self.end = float(end)
+        self.start = start
+        self.end = end
+
+    def level(self, value: float) -> float:
+        level = (abs(value) - self.start) / (self.end - self.start)
+        return max(0.0, min(level, 1.0))
 
 
 class Settings:
@@ -21,28 +26,15 @@ class Settings:
         self.yaw_rate = yaw_rate
 
 
-def default_settings() -> Settings:
-    return Settings(
-        Threshold(0.05, 0.1),
-        Threshold(0.05, 0.1),
-        Threshold(6.0, 8.0),
-        Threshold(0.2, 0.6),
-    )
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
 
 
-def load_settings(path: str) -> Settings:
-    try:
-        with open(path) as file:
-            raw = json.load(file)
-        thresholds = vars(default_settings())
-        thresholds.update(
-            {kind: Threshold(**values) for kind, values in raw.items()}
-        )
-        return Settings(**thresholds)
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        return default_settings()
+def load_settings() -> Settings:
+    with open(path) as file:
+        saved = json.load(file)
+    return Settings(**{name: Threshold(**values) for name, values in saved.items()})
 
 
-def save_settings(settings: Settings, path: str) -> None:
+def save_settings(settings: Settings) -> None:
     with open(path, "w") as file:
-        json.dump(settings, file, default=vars, indent=2)
+        json.dump(settings, file, default=vars, indent=2, sort_keys=True)

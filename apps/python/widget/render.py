@@ -1,85 +1,107 @@
-import ac
+import ac, acsys
 
-GREY = (0.3, 0.3, 0.3, 1.0)
-PURPLE = (0.6, 0.3, 1.0, 1.0)
-AMBER = (1.0, 0.7, 0.0, 1.0)
-WHITE = (1.0, 1.0, 1.0, 1.0)
-FAINT = (1.0, 1.0, 1.0, 0.15)
+from abc import ABCMeta, abstractmethod
+
+from settings import Threshold
+from telemetry import Snapshot
 
 
-class Bar:
+class Color:
     def __init__(
-        self, left: float, top: float, width: int, height: float, half: float
+        self, red: float, green: float, blue: float, alpha: float = 1
     ) -> None:
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+
+    def mix(self, other: "Color", level: float) -> "Color":
+        return Color(
+            self.red + (other.red - self.red) * level,
+            self.green + (other.green - self.green) * level,
+            self.blue + (other.blue - self.blue) * level,
+            self.alpha + (other.alpha - self.alpha) * level,
+        )
+
+
+Color.grey = Color(0.25, 0.25, 0.25, 0.8)
+Color.red = Color(1.0, 0.2, 0.2)
+Color.purple = Color(0.6, 0.3, 1.0)
+Color.amber = Color(1.0, 0.69, 0.0)
+Color.white = Color(0.9, 0.9, 0.9, 0.85)
+Color.faint = Color(1.0, 1.0, 1.0, 0.15)
+
+
+class Point:
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+
+class Slot:
+    def __init__(self, left: float, top: float, width: float, height: float) -> None:
         self.left = left
         self.top = top
         self.width = width
         self.height = height
-        self.half = half
 
 
-class ColorRange:
-    def __init__(
-        self, start: float, end: float, color_from: tuple, color_to: tuple
-    ) -> None:
-        self.start = start
-        self.end = end
-        self.color_from = color_from
-        self.color_to = color_to
+class Component(metaclass=ABCMeta):
+    @abstractmethod
+    def update(self, snapshot: Snapshot) -> None:
+        pass
 
+    @staticmethod
+    def paint(color: Color) -> None:
+        ac.glColor4f(color.red, color.green, color.blue, color.alpha)
 
-def blend(color_from: tuple, color_to: tuple, fraction: float) -> tuple:
-    return tuple(
-        start + (end - start) * fraction for start, end in zip(color_from, color_to)
-    )
+    @staticmethod
+    def shade(threshold: Threshold, color: Color, value: float) -> Color:
+        return Color.grey.mix(color, threshold.level(value))
 
+    @staticmethod
+    def fill(slot: Slot, color: Color) -> None:
+        Component.paint(color)
+        ac.glQuad(slot.left, slot.top, slot.width, slot.height)
 
-def range_fraction(value: float, color_range: ColorRange) -> float:
-    width = (color_range.end - color_range.start) or 1e-9
-    return max(0.0, min(1.0, (value - color_range.start) / width))
+    @staticmethod
+    def triangle(points: list, color: Color) -> None:
+        Component.paint(color)
+        ac.glBegin(acsys.GL.Triangles)
+        for point in points:
+            ac.glVertex2f(point.x, point.y)
+        ac.glEnd()
 
+    @staticmethod
+    def grid(
+        area: Slot, columns: int, rows: int, column_gap: float, row_gap: float
+    ) -> list:
+        width = (area.width - column_gap * (columns - 1)) / columns
+        height = (area.height - row_gap * (rows - 1)) / rows
 
-def range_distance(value: float, color_range: ColorRange) -> float:
-    low, high = sorted((color_range.start, color_range.end))
-    return max(low - value, 0.0, value - high)
+        slots = []
 
+        for row in range(rows):
+            for column in range(columns):
+                x = area.left + column * (width + column_gap)
+                y = area.top + row * (height + row_gap)
+                slots.append(Slot(x, y, width, height))
 
-def color_at(value: float, color_ranges: list) -> tuple:
-    nearest = min(
-        color_ranges, key=lambda color_range: range_distance(value, color_range)
-    )
-    return blend(nearest.color_from, nearest.color_to, range_fraction(value, nearest))
+        return slots
 
+    @staticmethod
+    def label(app_id: int, text: str, slot: Slot, size: float, alignment: str) -> int:
+        label = ac.addLabel(app_id, text)
+        ac.setPosition(label, slot.left, slot.top)
+        ac.setSize(label, slot.width, slot.height)
+        ac.setFontSize(label, size)
+        ac.setFontAlignment(label, alignment)
+        return label
 
-def column_value(bar: Bar, column: int) -> float:
-    return (column + 0.5) / bar.width * 2 * bar.half - bar.half
-
-
-def value_pixel(bar: Bar, value: float) -> float:
-    clamped = max(-bar.half, min(bar.half, value))
-    return bar.left + (clamped + bar.half) / (2 * bar.half) * bar.width
-
-
-def draw_gradient(bar: Bar, color_ranges: list) -> None:
-    for column in range(bar.width):
-        ac.glColor4f(*color_at(column_value(bar, column), color_ranges))
-        ac.glQuad(bar.left + column, bar.top, 1, bar.height)
-
-
-def draw_tick(bar: Bar, value: float) -> None:
-    ac.glColor4f(*WHITE)
-    ac.glQuad(value_pixel(bar, value) - 0.5, bar.top - 4, 1, bar.height + 8)
-
-
-def draw_ticks(bar: Bar, color_ranges: list) -> None:
-    draw_tick(bar, 0.0)
-    for color_range in color_ranges:
-        draw_tick(bar, color_range.start)
-        draw_tick(bar, color_range.end)
-
-
-def draw_marker_row(bar: Bar, top: float, height: float, value: float) -> None:
-    ac.glColor4f(*FAINT)
-    ac.glQuad(bar.left, top + height / 2 - 1, bar.width, 2)
-    ac.glColor4f(*WHITE)
-    ac.glQuad(value_pixel(bar, value) - 2, top + 2, 4, height - 4)
+    @staticmethod
+    def button(app_id: int, text: str, slot: Slot, on_click: object) -> int:
+        button = ac.addButton(app_id, text)
+        ac.setPosition(button, slot.left, slot.top)
+        ac.setSize(button, slot.width, slot.height)
+        ac.addOnClickedListener(button, on_click)
+        return button
