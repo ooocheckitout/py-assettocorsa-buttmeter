@@ -1,10 +1,8 @@
 import ac, acsys
 
-from render import Color, Position, Size, Slot
-from components.rotation_component import RotationComponent
+from render import Color, Position, Size
 from settings import Settings, Threshold
 from telemetry import Snapshot, read_snapshot
-from components.tires_component import TireStyle, TiresComponent
 
 
 def level(threshold: Threshold, value: float) -> float:
@@ -52,30 +50,6 @@ class WidgetApplication:
         ac.setIconPosition(self.id, 0, -10000)
         ac.drawBorder(self.id, 0)
 
-        self.components = [
-            TiresComponent(
-                slot=Slot(20, 60, 200, 240),
-                track_gap=90,
-                axle_gap=70,
-                style=TireStyle(
-                    line_height=12,
-                    line_gap=6,
-                    lock=settings.lock,
-                    spin=settings.spin,
-                    angle=settings.slip_angle,
-                    lock_color=Color.purple,
-                    spin_color=Color.amber,
-                    angle_color=Color.white,
-                ),
-            ),
-            RotationComponent(
-                slot=Slot(105, 75, 30, 210),
-                length=210,
-                thickness=9,
-                threshold=settings.yaw_rate,
-                color=Color.red,
-            ),
-        ]
         # AC does not hold a reference to callbacks, so keep the bound method alive
         self.callback = self.render
         ac.addRenderCallback(self.id, self.callback)
@@ -84,25 +58,23 @@ class WidgetApplication:
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
-        tire_size = Size(70, 110)
+        tire_size = Size(55, 85)
 
-        draw_tire(Position(0, 18), tire_size, fl.slip_ratio, settings)
-        draw_tire(Position(125, 18), tire_size, fr.slip_ratio, settings)
-        draw_tire(Position(0, 185), tire_size, rl.slip_ratio, settings)
-        draw_tire(Position(125, 185), tire_size, rr.slip_ratio, settings)
+        draw_tire(Position(20, 60), tire_size, fl.slip_ratio, settings)
+        draw_tire(Position(165, 60), tire_size, fr.slip_ratio, settings)
+        draw_tire(Position(20, 215), tire_size, rl.slip_ratio, settings)
+        draw_tire(Position(165, 215), tire_size, rr.slip_ratio, settings)
 
-        line_size = Size(70, 10)
+        line_size = Size(55, 12)
 
-        draw_line(Position(0, 0), line_size, fl.slip_angle, settings)
-        draw_line(Position(125, 0), line_size, fr.slip_angle, settings)
-        draw_line(Position(0, 301), line_size, rl.slip_angle, settings)
-        draw_line(Position(125, 301), line_size, rr.slip_angle, settings)
+        draw_line(Position(20, 42), line_size, fl.slip_angle, settings)
+        draw_line(Position(165, 42), line_size, fr.slip_angle, settings)
+        draw_line(Position(20, 306), line_size, rl.slip_angle, settings)
+        draw_line(Position(165, 306), line_size, rr.slip_angle, settings)
 
-        draw_arrow(Position(83, 0), Size(29, 311), snapshot.angular_velocity.yaw, settings)
+        draw_arrow(Position(105.6, 75), Size(28.8, 210), snapshot.angular_velocity.yaw, settings)
 
     def render(self, _: float) -> None:
         ac.setBackgroundOpacity(self.id, 0.025)
         snapshot = read_snapshot()
         self.layout(snapshot)
-        # for component in self.components:
-        #     component.update(snapshot)
