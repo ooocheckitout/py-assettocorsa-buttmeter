@@ -80,6 +80,41 @@ class SlipRatioComponent(Component):
             )
 
 
+class SlipAngleComponent(Component):
+    def __init__(
+        self, left: float, top: float, size: float, gap: float, limit: float
+    ) -> None:
+        self.left = left
+        self.top = top
+        self.size = size
+        self.gap = gap
+        self.limit = limit
+
+    def update(self, wheels: Wheels) -> None:
+        cells = (
+            (0, 0, wheels.front_left),
+            (1, 0, wheels.front_right),
+            (0, 1, wheels.rear_left),
+            (1, 1, wheels.rear_right),
+        )
+        step = self.size + self.gap
+        half = self.size / 2
+        for column, row, wheel in cells:
+            cell_left = self.left + column * step
+            cell_top = self.top + row * step
+            ratio = max(-1.0, min(wheel.slip_angle / self.limit, 1.0))
+            level = abs(ratio)
+            offset = ratio * half
+
+            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
+            ac.glQuad(cell_left, cell_top, self.size, self.size)
+
+            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            ac.glQuad(
+                cell_left + half + min(offset, 0.0), cell_top, abs(offset), self.size
+            )
+
+
 components = ()
 
 
@@ -100,7 +135,10 @@ def acMain(_: str) -> str:
 
     ac.setSize(app_id, 600, 800)
 
-    components = (SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),)
+    components = (
+        SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),
+        SlipAngleComponent(left=10, top=250, size=90, gap=10, limit=8.0),
+    )
 
     ac.addRenderCallback(app_id, render_all)
 
