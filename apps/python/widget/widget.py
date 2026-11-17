@@ -75,56 +75,6 @@ class Component(metaclass=ABCMeta):
         pass
 
 
-class SlipRatioComponent(Component):
-    def __init__(
-        self, left: float, top: float, size: float, gap: float, threshold: Threshold
-    ) -> None:
-        self.left = left
-        self.top = top
-        self.size = size
-        self.gap = gap
-        self.threshold = threshold
-
-    def update(self, snapshot: Snapshot) -> None:
-        cells = (
-            (0, 0, snapshot.wheels.front_left),
-            (1, 0, snapshot.wheels.front_right),
-            (0, 1, snapshot.wheels.rear_left),
-            (1, 1, snapshot.wheels.rear_right),
-        )
-        step = self.size + self.gap
-        for column, row, wheel in cells:
-            indicator_color(intensity(wheel.slip_ratio, self.threshold))
-            ac.glQuad(
-                self.left + column * step, self.top + row * step, self.size, self.size
-            )
-
-
-class SlipAngleComponent(Component):
-    def __init__(
-        self, left: float, top: float, size: float, gap: float, threshold: Threshold
-    ) -> None:
-        self.left = left
-        self.top = top
-        self.size = size
-        self.gap = gap
-        self.threshold = threshold
-
-    def update(self, snapshot: Snapshot) -> None:
-        cells = (
-            (0, 0, snapshot.wheels.front_left),
-            (1, 0, snapshot.wheels.front_right),
-            (0, 1, snapshot.wheels.rear_left),
-            (1, 1, snapshot.wheels.rear_right),
-        )
-        step = self.size + self.gap
-        for column, row, wheel in cells:
-            indicator_color(intensity(wheel.slip_ratio, self.threshold))
-            ac.glQuad(
-                self.left + column * step, self.top + row * step, self.size, self.size
-            )
-
-
 class RotationRateComponent(Component):
     def __init__(
         self,
@@ -223,12 +173,6 @@ def acMain(_: str) -> str:
     ac.setSize(app_id, 600, 800)
 
     components = (
-        SlipRatioComponent(
-            left=10, top=40, size=90, gap=10, threshold=Threshold(0.10, 0.20)
-        ),
-        SlipAngleComponent(
-            left=10, top=250, size=90, gap=10, threshold=Threshold(6.0, 10.0)
-        ),
         RotationRateComponent(
             left=10,
             top=460,
