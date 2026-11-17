@@ -64,12 +64,12 @@ class SlipRatioComponent(Component):
         self.gap = gap
         self.limit = limit
 
-    def update(self, wheels: Wheels) -> None:
+    def update(self, snapshot: Snapshot) -> None:
         cells = (
-            (0, 0, wheels.front_left),
-            (1, 0, wheels.front_right),
-            (0, 1, wheels.rear_left),
-            (1, 1, wheels.rear_right),
+            (0, 0, snapshot.wheels.front_left),
+            (1, 0, snapshot.wheels.front_right),
+            (0, 1, snapshot.wheels.rear_left),
+            (1, 1, snapshot.wheels.rear_right),
         )
         step = self.size + self.gap
         for column, row, wheel in cells:
@@ -90,12 +90,12 @@ class SlipAngleComponent(Component):
         self.gap = gap
         self.limit = limit
 
-    def update(self, wheels: Wheels) -> None:
+    def update(self, snapshot: Snapshot) -> None:
         cells = (
-            (0, 0, wheels.front_left),
-            (1, 0, wheels.front_right),
-            (0, 1, wheels.rear_left),
-            (1, 1, wheels.rear_right),
+            (0, 0, snapshot.wheels.front_left),
+            (1, 0, snapshot.wheels.front_right),
+            (0, 1, snapshot.wheels.rear_left),
+            (1, 1, snapshot.wheels.rear_right),
         )
         step = self.size + self.gap
         half = self.size / 2
@@ -115,6 +115,43 @@ class SlipAngleComponent(Component):
             )
 
 
+class RotationRateComponent(Component):
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        width: float,
+        height: float,
+        gap: float,
+        limit: float,
+    ) -> None:
+        self.left = left
+        self.top = top
+        self.width = width
+        self.height = height
+        self.gap = gap
+        self.limit = limit
+
+    def update(self, snapshot: Snapshot) -> None:
+        rotation = snapshot.angular_velocity
+        axes = (rotation.pitch, rotation.yaw, rotation.roll)
+        step = self.height + self.gap
+        half = self.width / 2
+        for row, value in enumerate(axes):
+            bar_top = self.top + row * step
+            ratio = max(-1.0, min(value / self.limit, 1.0))
+            level = abs(ratio)
+            offset = ratio * half
+
+            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
+            ac.glQuad(self.left, bar_top, self.width, self.height)
+
+            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            ac.glQuad(
+                self.left + half + min(offset, 0.0), bar_top, abs(offset), self.height
+            )
+
+
 components = ()
 
 
@@ -123,7 +160,7 @@ def render_all(_: float) -> None:
     snapshot = read_snapshot()
 
     for component in components:
-        component.update(snapshot.wheels)
+        component.update(snapshot)
 
 
 def acMain(_: str) -> str:
@@ -138,6 +175,7 @@ def acMain(_: str) -> str:
     components = (
         SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),
         SlipAngleComponent(left=10, top=250, size=90, gap=10, limit=8.0),
+        RotationRateComponent(left=10, top=460, width=190, height=40, gap=10, limit=1.0),
     )
 
     ac.addRenderCallback(app_id, render_all)
