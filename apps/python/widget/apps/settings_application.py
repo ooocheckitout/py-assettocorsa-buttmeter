@@ -8,7 +8,11 @@ from telemetry import read_snapshot
 
 class SettingsApplication:
     def __init__(self, settings: Settings) -> None:
-        self.id = ac.newApp("widget settings")
+        self.settings = settings
+
+    def initialize(self) -> None:
+        settings = self.settings
+        self.id = ac.newApp("AlligatorRacing_Settings")
         self.components = []
 
         top = 40

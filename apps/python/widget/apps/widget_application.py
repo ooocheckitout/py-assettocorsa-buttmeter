@@ -9,11 +9,14 @@ from components.tires_component import TireStyle, TiresComponent
 
 class WidgetApplication:
     def __init__(self, settings: Settings) -> None:
-        self.id = ac.newApp("widget")
+        self.settings = settings
+
+    def initialize(self) -> None:
+        settings = self.settings
+        self.id = ac.newApp("AlligatorRacing_Widget")
         ac.setSize(self.id, 240, 360)
         ac.setTitle(self.id, "")
         ac.setIconPosition(self.id, 0, -10000)
-        ac.setBackgroundOpacity(self.id, 0.025)
         ac.drawBorder(self.id, 0)
 
         self.components = [
@@ -45,6 +48,7 @@ class WidgetApplication:
         ac.addRenderCallback(self.id, self.callback)
 
     def render(self, _: float) -> None:
+        ac.setBackgroundOpacity(self.id, 0.025)
         snapshot = read_snapshot()
         for component in self.components:
             component.update(snapshot)

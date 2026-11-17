@@ -9,13 +9,14 @@ from apps.widget_application import WidgetApplication
 # The icon is taken from: content\gui\icons\{self.name}_{ON,OFF}.png
 # The logs are stored: Documents\Assetto Corsa\logs\py_log.txt
 
-applications = []
+settings = load_settings()
+widget_app = WidgetApplication(settings)
+settings_app = SettingsApplication(settings)
 
 
 def acMain(_: str) -> str:
     """Runs once the session is loaded."""
-    settings = load_settings()
-    applications.append(WidgetApplication(settings))
-    applications.append(SettingsApplication(settings))
+    widget_app.initialize()
+    settings_app.initialize()
 
     return "AlligatorRacing"
