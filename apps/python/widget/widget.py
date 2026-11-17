@@ -113,6 +113,12 @@ class Component(metaclass=ABCMeta):
         ac.glQuad(slot.left, slot.top, slot.width, slot.height)
 
     @staticmethod
+    def fill_all(slots: list, color: Color) -> None:
+        Component.paint(color)
+        for slot in slots:
+            ac.glQuad(slot.left, slot.top, slot.width, slot.height)
+
+    @staticmethod
     def triangle(points: list, color: Color) -> None:
         Component.paint(color)
         ac.glBegin(acsys.GL.Triangles)
@@ -139,14 +145,14 @@ class Component(metaclass=ABCMeta):
 class TireStyle:
     def __init__(
         self,
-        line: float,
-        spacing: float,
+        line_height: float,
+        line_gap: float,
         lock_threshold: Threshold,
         spin_threshold: Threshold,
         angle_threshold: Threshold,
     ) -> None:
-        self.line = line
-        self.spacing = spacing
+        self.line_height = line_height
+        self.line_gap = line_gap
         self.lock_threshold = lock_threshold
         self.spin_threshold = spin_threshold
         self.angle_threshold = angle_threshold
@@ -154,31 +160,58 @@ class TireStyle:
 
 class TiresComponent(Component):
     def __init__(self, slot: Slot, gap: float, style: TireStyle) -> None:
-        self.slot = slot
-        self.gap = gap
         self.style = style
+        self.tires = self.grid(slot, 2, 2, gap)
+        front_left, front_right, rear_left, rear_right = self.tires
 
-    def draw_tire(self, slot: Slot, wheel: Wheel, line_below: bool) -> None:
-        style = self.style
-        ratio = style.lock_threshold if wheel.slip_ratio < 0 else style.spin_threshold
-        self.fill(slot, ratio.color(wheel.slip_ratio))
-        line_top = (
-            slot.top + slot.height + style.spacing
-            if line_below
-            else slot.top - style.spacing - style.line
-        )
-        line_slot = Slot(slot.left, line_top, slot.width, style.line)
-        self.fill(line_slot, style.angle_threshold.color(wheel.slip_angle))
+        above_offset = -style.line_gap - style.line_height
+        below_offset = rear_left.height + style.line_gap
+
+        self.lines = [
+            Slot(
+                front_left.left,
+                front_left.top + above_offset,
+                front_left.width,
+                style.line_height,
+            ),
+            Slot(
+                front_right.left,
+                front_right.top + above_offset,
+                front_right.width,
+                style.line_height,
+            ),
+            Slot(
+                rear_left.left,
+                rear_left.top + below_offset,
+                rear_left.width,
+                style.line_height,
+            ),
+            Slot(
+                rear_right.left,
+                rear_right.top + below_offset,
+                rear_right.width,
+                style.line_height,
+            ),
+        ]
 
     def update(self, snapshot: Snapshot) -> None:
-        wheels = snapshot.wheels
-        (front_left, front_right), (rear_left, rear_right) = self.grid(
-            self.slot, 2, 2, self.gap
+        metrics = (
+            snapshot.wheels.front_left,
+            snapshot.wheels.front_right,
+            snapshot.wheels.rear_left,
+            snapshot.wheels.rear_right,
         )
-        self.draw_tire(front_left, wheels.front_left, False)
-        self.draw_tire(front_right, wheels.front_right, False)
-        self.draw_tire(rear_left, wheels.rear_left, True)
-        self.draw_tire(rear_right, wheels.rear_right, True)
+
+        for tire, wheel in zip(self.tires, metrics):
+            threshold = self.style.spin_threshold
+
+            if wheel.slip_ratio < 0:
+                threshold = self.style.lock_threshold
+
+            self.fill(tire, threshold.color(wheel.slip_ratio))
+
+        for line, wheel in zip(self.lines, metrics):
+            self.fill(line, self.style.angle_threshold.color(wheel.slip_angle))
 
 
 class RotationComponent(Component):
@@ -190,40 +223,30 @@ class RotationComponent(Component):
         dash: float,
         threshold: Threshold,
     ) -> None:
-        self.slot = slot
-        self.length = length
-        self.thickness = thickness
-        self.dash = dash
         self.threshold = threshold
-
-    def draw_center_line(self, middle: float) -> None:
-        bottom = self.slot.top + self.slot.height
-        dash_top = self.slot.top
+        middle = slot.left + slot.width / 2
+        bottom = slot.top + slot.height
+        self.dashes = []
+        dash_top = slot.top
         while dash_top < bottom:
-            height = min(self.dash, bottom - dash_top)
-            self.fill(Slot(middle - 1, dash_top, 2, height), Color.silver)
-            dash_top += 2 * self.dash
+            height = min(dash, bottom - dash_top)
+            self.dashes.append(Slot(middle - 1, dash_top, 2, height))
+            dash_top += 2 * dash
+        top = slot.top + (slot.height - length) / 2
+        head = thickness * 3
+        neck = top + head
+        self.shaft = Slot(middle - thickness / 2, neck, thickness, length - head)
+        self.arrow = [
+            Point(middle - head / 2, neck),
+            Point(middle + head / 2, neck),
+            Point(middle, top),
+        ]
 
     def update(self, snapshot: Snapshot) -> None:
-        middle = self.slot.left + self.slot.width / 2
-        self.draw_center_line(middle)
-
+        self.fill_all(self.dashes, Color.silver)
         color = self.threshold.color(snapshot.angular_velocity.yaw)
-        top = self.slot.top + (self.slot.height - self.length) / 2
-        head = self.thickness * 3
-        neck = top + head
-        shaft = Slot(
-            middle - self.thickness / 2, neck, self.thickness, self.length - head
-        )
-        self.fill(shaft, color)
-        self.triangle(
-            [
-                Point(middle - head / 2, neck),
-                Point(middle + head / 2, neck),
-                Point(middle, top),
-            ],
-            color,
-        )
+        self.fill(self.shaft, color)
+        self.triangle(self.arrow, color)
 
 
 components = ()
@@ -251,8 +274,8 @@ def acMain(_: str) -> str:
             slot=Slot(250, 40, 160, 220),
             gap=40,
             style=TireStyle(
-                line=12,
-                spacing=6,
+                line_height=12,
+                line_gap=6,
                 lock_threshold=Threshold(0.10, 0.20, Color.grey, Color.purple),
                 spin_threshold=Threshold(0.10, 0.20, Color.grey, Color.amber),
                 angle_threshold=Threshold(6.0, 10.0, Color.grey, Color.white),
