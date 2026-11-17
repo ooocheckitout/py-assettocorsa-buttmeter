@@ -59,6 +59,13 @@ class Color:
         self.blue = blue
 
 
+Color.grey = Color(0.2, 0.2, 0.2)
+Color.red = Color(1.0, 0.0, 0.0)
+Color.purple = Color(0.6, 0.0, 1.0)
+Color.amber = Color(1.0, 0.75, 0.0)
+Color.white = Color(1.0, 1.0, 1.0)
+
+
 class Threshold:
     def __init__(
         self, start: float, end: float, start_color: Color, end_color: Color
@@ -117,6 +124,14 @@ class Point:
         self.y = y
 
 
+class Slot:
+    def __init__(self, left: float, top: float, width: float, height: float) -> None:
+        self.left = left
+        self.top = top
+        self.width = width
+        self.height = height
+
+
 def draw_shape(mode: int, points: list) -> None:
     ac.glBegin(mode)
     for point in points:
@@ -128,6 +143,33 @@ class Component(metaclass=ABCMeta):
     @abstractmethod
     def update(self, snapshot: Snapshot) -> None:
         pass
+
+    @staticmethod
+    def fill(slot: Slot, value: float, threshold: Threshold) -> None:
+        indicator_color(value, threshold)
+        ac.glQuad(slot.left, slot.top, slot.width, slot.height)
+
+    @staticmethod
+    def equal(total: float, count: int, gap: float) -> list:
+        return [(total - gap * (count - 1)) / count] * count
+
+    @staticmethod
+    def stack(area: Slot, heights: list, gap: float) -> list:
+        slots = []
+        top = area.top
+        for height in heights:
+            slots.append(Slot(area.left, top, area.width, height))
+            top += height + gap
+        return slots
+
+    @staticmethod
+    def row(area: Slot, widths: list, gap: float) -> list:
+        slots = []
+        left = area.left
+        for width in widths:
+            slots.append(Slot(left, area.top, width, area.height))
+            left += width + gap
+        return slots
 
 
 class RotationRateComponent(Component):
@@ -158,91 +200,88 @@ class RotationRateComponent(Component):
             )
 
 
-class TireStateComponent(Component):
+class TireStyle:
     def __init__(
         self,
-        left: float,
-        top: float,
-        width: float,
-        height: float,
-        gap: float,
         line: float,
         spacing: float,
         lock_threshold: Threshold,
         spin_threshold: Threshold,
         angle_threshold: Threshold,
     ) -> None:
-        self.left = left
-        self.top = top
-        self.width = width
-        self.height = height
-        self.gap = gap
         self.line = line
         self.spacing = spacing
         self.lock_threshold = lock_threshold
         self.spin_threshold = spin_threshold
         self.angle_threshold = angle_threshold
 
-    def update(self, snapshot: Snapshot) -> None:
-        cells = (
-            (0, 0, snapshot.wheels.front_left),
-            (1, 0, snapshot.wheels.front_right),
-            (0, 1, snapshot.wheels.rear_left),
-            (1, 1, snapshot.wheels.rear_right),
+
+class TiresComponent(Component):
+    def __init__(self, slot: Slot, gap: float, style: TireStyle) -> None:
+        self.slot = slot
+        self.gap = gap
+        self.style = style
+
+    def draw_tire(self, slot: Slot, wheel: Wheel, line_below: bool) -> None:
+        style = self.style
+        ratio_threshold = (
+            style.lock_threshold if wheel.slip_ratio < 0 else style.spin_threshold
         )
-        for column, row, wheel in cells:
-            left = self.left + column * (self.width + self.gap)
-            top = self.top + row * (self.height + self.gap)
-            ratio_threshold = (
-                self.lock_threshold if wheel.slip_ratio < 0 else self.spin_threshold
-            )
-            indicator_color(wheel.slip_ratio, ratio_threshold)
-            ac.glQuad(left, top, self.width, self.height)
-            line_top = (
-                top - self.spacing - self.line
-                if row == 0
-                else top + self.height + self.spacing
-            )
-            indicator_color(wheel.slip_angle, self.angle_threshold)
-            ac.glQuad(left, line_top, self.width, self.line)
+        self.fill(slot, wheel.slip_ratio, ratio_threshold)
+        line_top = (
+            slot.top + slot.height + style.spacing
+            if line_below
+            else slot.top - style.spacing - style.line
+        )
+        line_slot = Slot(slot.left, line_top, slot.width, style.line)
+        self.fill(line_slot, wheel.slip_angle, style.angle_threshold)
+
+    def update(self, snapshot: Snapshot) -> None:
+        wheels = snapshot.wheels
+        gap = self.gap
+        front, rear = self.stack(self.slot, self.equal(self.slot.height, 2, gap), gap)
+        front_left, front_right = self.row(front, self.equal(front.width, 2, gap), gap)
+        rear_left, rear_right = self.row(rear, self.equal(rear.width, 2, gap), gap)
+        self.draw_tire(front_left, wheels.front_left, False)
+        self.draw_tire(front_right, wheels.front_right, False)
+        self.draw_tire(rear_left, wheels.rear_left, True)
+        self.draw_tire(rear_right, wheels.rear_right, True)
 
 
-class BalanceComponent(Component):
+class RotationComponent(Component):
     def __init__(
         self,
-        center: Point,
+        slot: Slot,
         length: float,
-        line_length: float,
         thickness: float,
         dash: float,
         threshold: Threshold,
     ) -> None:
-        self.center = center
+        self.slot = slot
         self.length = length
-        self.line_length = line_length
         self.thickness = thickness
         self.dash = dash
         self.threshold = threshold
 
-    def draw_center_line(self) -> None:
+    def draw_center_line(self, middle: float) -> None:
         ac.glColor4f(0.5, 0.5, 0.5, 1.0)
-        top = self.center.y - self.line_length / 2
-        bottom = top + self.line_length
-        for index in range(math.ceil(self.line_length / (2 * self.dash))):
-            dash_top = top + index * 2 * self.dash
+        bottom = self.slot.top + self.slot.height
+        for index in range(math.ceil(self.slot.height / (2 * self.dash))):
+            dash_top = self.slot.top + index * 2 * self.dash
             height = min(self.dash, bottom - dash_top)
-            ac.glQuad(self.center.x - 1, dash_top, 2, height)
+            ac.glQuad(middle - 1, dash_top, 2, height)
 
     def update(self, snapshot: Snapshot) -> None:
-        self.draw_center_line()
+        middle = self.slot.left + self.slot.width / 2
+        self.draw_center_line(middle)
 
         indicator_color(snapshot.angular_velocity.yaw, self.threshold)
 
-        top = self.center.y - self.length / 2
+        top = self.slot.top + (self.slot.height - self.length) / 2
         head = self.thickness * 3
         neck = top + head
         ac.glQuad(
-            self.center.x - self.thickness / 2,
+            middle - self.thickness / 2,
             neck,
             self.thickness,
             self.length - head,
@@ -250,9 +289,9 @@ class BalanceComponent(Component):
         draw_shape(
             acsys.GL.Triangles,
             [
-                Point(self.center.x - head / 2, neck),
-                Point(self.center.x + head / 2, neck),
-                Point(self.center.x, top),
+                Point(middle - head / 2, neck),
+                Point(middle + head / 2, neck),
+                Point(middle, top),
             ],
         )
 
@@ -277,12 +316,6 @@ def acMain(_: str) -> str:
 
     ac.setSize(app_id, 600, 800)
 
-    gray = Color(0.2, 0.2, 0.2)
-    red = Color(1.0, 0.0, 0.0)
-    purple = Color(0.6, 0.0, 1.0)
-    amber = Color(1.0, 0.75, 0.0)
-    white = Color(1.0, 1.0, 1.0)
-
     components = (
         RotationRateComponent(
             left=10,
@@ -290,27 +323,25 @@ def acMain(_: str) -> str:
             width=190,
             height=40,
             gap=10,
-            threshold=Threshold(0.6, 1.2, gray, red),
+            threshold=Threshold(0.6, 1.2, Color.grey, Color.red),
         ),
-        TireStateComponent(
-            left=250,
-            top=40,
-            width=60,
-            height=90,
+        TiresComponent(
+            slot=Slot(250, 40, 160, 220),
             gap=40,
-            line=12,
-            spacing=6,
-            lock_threshold=Threshold(0.10, 0.20, gray, purple),
-            spin_threshold=Threshold(0.10, 0.20, gray, amber),
-            angle_threshold=Threshold(6.0, 10.0, gray, white),
+            style=TireStyle(
+                line=12,
+                spacing=6,
+                lock_threshold=Threshold(0.10, 0.20, Color.grey, Color.purple),
+                spin_threshold=Threshold(0.10, 0.20, Color.grey, Color.amber),
+                angle_threshold=Threshold(6.0, 10.0, Color.grey, Color.white),
+            ),
         ),
-        BalanceComponent(
-            center=Point(330, 150),
+        RotationComponent(
+            slot=Slot(315, 30, 30, 240),
             length=180,
-            line_length=240,
             thickness=10,
             dash=8,
-            threshold=Threshold(0.2, 0.6, gray, red),
+            threshold=Threshold(0.2, 0.6, Color.grey, Color.red),
         ),
     )
 
