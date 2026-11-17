@@ -49,25 +49,28 @@ def read_snapshot() -> Snapshot:
 
 
 class Color:
-    def __init__(self, red: float, green: float, blue: float) -> None:
+    def __init__(
+        self, red: float, green: float, blue: float, alpha: float = 1
+    ) -> None:
         self.red = red
         self.green = green
         self.blue = blue
+        self.alpha = alpha
 
     def mix(self, other: "Color", level: float) -> "Color":
         return Color(
             self.red + (other.red - self.red) * level,
             self.green + (other.green - self.green) * level,
             self.blue + (other.blue - self.blue) * level,
+            self.alpha + (other.alpha - self.alpha) * level,
         )
 
 
-Color.grey = Color(0.2, 0.2, 0.2)
-Color.silver = Color(0.5, 0.5, 0.5)
-Color.red = Color(1.0, 0.0, 0.0)
-Color.purple = Color(0.6, 0.0, 1.0)
-Color.amber = Color(1.0, 0.75, 0.0)
-Color.white = Color(1.0, 1.0, 1.0)
+Color.grey = Color(0.25, 0.25, 0.25, 0.8)
+Color.red = Color(1.0, 0.2, 0.2)
+Color.purple = Color(0.6, 0.3, 1.0)
+Color.amber = Color(1.0, 0.69, 0.0)
+Color.white = Color(0.9, 0.9, 0.9, 0.85)
 
 
 class Threshold:
@@ -105,18 +108,12 @@ class Component(metaclass=ABCMeta):
 
     @staticmethod
     def paint(color: Color) -> None:
-        ac.glColor4f(color.red, color.green, color.blue, 1.0)
+        ac.glColor4f(color.red, color.green, color.blue, color.alpha)
 
     @staticmethod
     def fill(slot: Slot, color: Color) -> None:
         Component.paint(color)
         ac.glQuad(slot.left, slot.top, slot.width, slot.height)
-
-    @staticmethod
-    def fill_all(slots: list, color: Color) -> None:
-        Component.paint(color)
-        for slot in slots:
-            ac.glQuad(slot.left, slot.top, slot.width, slot.height)
 
     @staticmethod
     def triangle(points: list, color: Color) -> None:
@@ -127,16 +124,18 @@ class Component(metaclass=ABCMeta):
         ac.glEnd()
 
     @staticmethod
-    def grid(area: Slot, columns: int, rows: int, gap: float) -> list:
-        width = (area.width - gap * (columns - 1)) / columns
-        height = (area.height - gap * (rows - 1)) / rows
+    def grid(
+        area: Slot, columns: int, rows: int, column_gap: float, row_gap: float
+    ) -> list:
+        width = (area.width - column_gap * (columns - 1)) / columns
+        height = (area.height - row_gap * (rows - 1)) / rows
 
         slots = []
 
         for row in range(rows):
             for column in range(columns):
-                x = area.left + column * (width + gap)
-                y = area.top + row * (height + gap)
+                x = area.left + column * (width + column_gap)
+                y = area.top + row * (height + row_gap)
                 slots.append(Slot(x, y, width, height))
 
         return slots
@@ -159,9 +158,11 @@ class TireStyle:
 
 
 class TiresComponent(Component):
-    def __init__(self, slot: Slot, gap: float, style: TireStyle) -> None:
+    def __init__(
+        self, slot: Slot, track_gap: float, axle_gap: float, style: TireStyle
+    ) -> None:
         self.style = style
-        self.tires = self.grid(slot, 2, 2, gap)
+        self.tires = self.grid(slot, 2, 2, track_gap, axle_gap)
         front_left, front_right, rear_left, rear_right = self.tires
 
         above_offset = -style.line_gap - style.line_height
@@ -220,30 +221,22 @@ class RotationComponent(Component):
         slot: Slot,
         length: float,
         thickness: float,
-        dash: float,
         threshold: Threshold,
     ) -> None:
         self.threshold = threshold
         middle = slot.left + slot.width / 2
-        bottom = slot.top + slot.height
-        self.dashes = []
-        dash_top = slot.top
-        while dash_top < bottom:
-            height = min(dash, bottom - dash_top)
-            self.dashes.append(Slot(middle - 1, dash_top, 2, height))
-            dash_top += 2 * dash
         top = slot.top + (slot.height - length) / 2
-        head = thickness * 3
+        head = thickness * 2.2
+        spread = thickness * 1.6
         neck = top + head
         self.shaft = Slot(middle - thickness / 2, neck, thickness, length - head)
         self.arrow = [
-            Point(middle - head / 2, neck),
-            Point(middle + head / 2, neck),
+            Point(middle - spread, neck),
+            Point(middle + spread, neck),
             Point(middle, top),
         ]
 
     def update(self, snapshot: Snapshot) -> None:
-        self.fill_all(self.dashes, Color.silver)
         color = self.threshold.color(snapshot.angular_velocity.yaw)
         self.fill(self.shaft, color)
         self.triangle(self.arrow, color)
@@ -267,25 +260,29 @@ def acMain(_: str) -> str:
     name = "widget"
     app_id = ac.newApp(name)
 
-    ac.setSize(app_id, 600, 800)
+    ac.setSize(app_id, 240, 320)
+    ac.setTitle(app_id, "")
+    ac.setIconPosition(app_id, 0, -10000)
+    ac.setBackgroundOpacity(app_id, 0.025)
+    ac.drawBorder(app_id, 0)
 
     components = (
         TiresComponent(
-            slot=Slot(250, 40, 160, 220),
-            gap=40,
+            slot=Slot(20, 40, 200, 240),
+            track_gap=90,
+            axle_gap=70,
             style=TireStyle(
                 line_height=12,
                 line_gap=6,
-                lock_threshold=Threshold(0.10, 0.20, Color.grey, Color.purple),
-                spin_threshold=Threshold(0.10, 0.20, Color.grey, Color.amber),
-                angle_threshold=Threshold(6.0, 10.0, Color.grey, Color.white),
+                lock_threshold=Threshold(0.05, 0.10, Color.grey, Color.purple),
+                spin_threshold=Threshold(0.05, 0.10, Color.grey, Color.amber),
+                angle_threshold=Threshold(6.0, 8.0, Color.grey, Color.white),
             ),
         ),
         RotationComponent(
-            slot=Slot(315, 30, 30, 240),
-            length=180,
-            thickness=10,
-            dash=8,
+            slot=Slot(105, 55, 30, 210),
+            length=210,
+            thickness=9,
             threshold=Threshold(0.2, 0.6, Color.grey, Color.red),
         ),
     )
