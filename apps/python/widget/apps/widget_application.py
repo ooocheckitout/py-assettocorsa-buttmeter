@@ -66,10 +66,10 @@ class WidgetApplication:
         draw_tire(Position(0, 200), tire_size, rl.slip_ratio, settings)
         draw_tire(Position(184, 200), tire_size, rr.slip_ratio, settings)
 
-        line_size = Size(64, 8)
+        line_size = Size(64, 10)
 
-        draw_line(Position(0, 8), line_size, fl.slip_angle, settings)
-        draw_line(Position(184, 8), line_size, fr.slip_angle, settings)
+        draw_line(Position(0, 6), line_size, fl.slip_angle, settings)
+        draw_line(Position(184, 6), line_size, fr.slip_angle, settings)
         draw_line(Position(0, 312), line_size, rl.slip_angle, settings)
         draw_line(Position(184, 312), line_size, rr.slip_angle, settings)
 
