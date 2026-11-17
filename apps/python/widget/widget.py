@@ -1,3 +1,5 @@
+import math
+
 import ac, acsys
 
 # The app should be installed to: apps\python\{self.name}\{self.name}.py
@@ -152,6 +154,69 @@ class RotationRateComponent(Component):
             )
 
 
+class FrictionCircleComponent(Component):
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        size: float,
+        gap: float,
+        ratio_limit: float,
+        angle_limit: float,
+    ) -> None:
+        self.left = left
+        self.top = top
+        self.size = size
+        self.gap = gap
+        self.ratio_limit = ratio_limit
+        self.angle_limit = angle_limit
+
+    def update(self, snapshot: Snapshot) -> None:
+        cells = (
+            (0, 0, snapshot.wheels.front_left),
+            (1, 0, snapshot.wheels.front_right),
+            (0, 1, snapshot.wheels.rear_left),
+            (1, 1, snapshot.wheels.rear_right),
+        )
+        step = self.size + self.gap
+        half = self.size / 2
+        radius = half * 0.7
+        dot = self.size * 0.08
+        for column, row, wheel in cells:
+            center_x = self.left + column * step + half
+            center_y = self.top + row * step + half
+            lateral = wheel.slip_angle / self.angle_limit
+            longitudinal = wheel.slip_ratio / self.ratio_limit
+            usage = math.hypot(lateral, longitudinal)
+            scale = min(usage, half / radius) / usage if usage > 0 else 0.0
+            level = min(usage, 1.0)
+
+            ac.glColor4f(0.2, 0.2, 0.2, 1.0)
+            ac.glQuad(center_x - half, center_y - half, self.size, self.size)
+
+            draw_ring(center_x, center_y, radius)
+
+            ac.glColor4f(level, 1.0 - level, 0.0, 1.0)
+            ac.glQuad(
+                center_x + lateral * scale * radius - dot / 2,
+                center_y - longitudinal * scale * radius - dot / 2,
+                dot,
+                dot,
+            )
+
+
+def draw_ring(center_x: float, center_y: float, radius: float) -> None:
+    segments = 32
+    ac.glColor4f(0.6, 0.6, 0.6, 1.0)
+    ac.glBegin(acsys.GL.LineStrip)
+    for index in range(segments + 1):
+        angle = 2 * math.pi * index / segments
+        ac.glVertex2f(
+            center_x + math.cos(angle) * radius, center_y + math.sin(angle) * radius
+        )
+    ac.glEnd()
+
+
 components = ()
 
 
@@ -175,7 +240,12 @@ def acMain(_: str) -> str:
     components = (
         SlipRatioComponent(left=10, top=40, size=90, gap=10, limit=0.2),
         SlipAngleComponent(left=10, top=250, size=90, gap=10, limit=8.0),
-        RotationRateComponent(left=10, top=460, width=190, height=40, gap=10, limit=1.0),
+        RotationRateComponent(
+            left=10, top=460, width=190, height=40, gap=10, limit=1.0
+        ),
+        FrictionCircleComponent(
+            left=220, top=40, size=190, gap=10, ratio_limit=0.15, angle_limit=8.0
+        ),
     )
 
     ac.addRenderCallback(app_id, render_all)
