@@ -55,7 +55,10 @@ class WidgetApplication:
         self.callback = self.render
         ac.addRenderCallback(self.id, self.callback)
 
-    def layout(self, snapshot: Snapshot) -> None:
+    def render(self, _: float) -> None:
+        ac.setBackgroundOpacity(self.id, 0.025)
+        snapshot = read_snapshot()
+
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
@@ -75,8 +78,3 @@ class WidgetApplication:
 
         yaw = snapshot.angular_velocity.yaw
         draw_arrow(Position(104.8, 24), Size(38.4, 280), yaw, settings)
-
-    def render(self, _: float) -> None:
-        ac.setBackgroundOpacity(self.id, 0.025)
-        snapshot = read_snapshot()
-        self.layout(snapshot)
