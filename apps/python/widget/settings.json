@@ -1,18 +1,18 @@
 {
   "lock": {
-    "end": 0.1, 
+    "end": 0.1,
     "start": 0.05
-  }, 
-  "spin": {
-    "end": 0.1, 
-    "start": 0.05
-  }, 
-  "yaw_rate": {
-    "end": 60.0, 
-    "start": 30.0
-  }, 
+  },
   "slip_angle": {
-    "end": 9.0, 
+    "end": 8.0,
     "start": 6.0
+  },
+  "spin": {
+    "end": 0.1,
+    "start": 0.05
+  },
+  "yaw_rate": {
+    "end": 0.6,
+    "start": 0.2
   }
 }

@@ -1,46 +1,50 @@
-import math
-
-import ac
-import acsys
+import ac, acsys
 
 
-class WheelSlips:
+class Wheel:
+    def __init__(self, slip_ratio: float, slip_angle: float) -> None:
+        self.slip_ratio = slip_ratio
+        self.slip_angle = slip_angle
+
+
+class Wheels:
+    def __init__(self, fl: Wheel, fr: Wheel, rl: Wheel, rr: Wheel) -> None:
+        self.front_left = fl
+        self.front_right = fr
+        self.rear_left = rl
+        self.rear_right = rr
+
+
+class Rotation:
+    def __init__(self, pitch: float, yaw: float, roll: float) -> None:
+        self.pitch = pitch
+        self.yaw = yaw
+        self.roll = roll
+
+
+class Snapshot:
     def __init__(
-        self, front_left: float, front_right: float, rear_left: float, rear_right: float
+        self, speed: float, wheels: Wheels, angular_velocity: Rotation
     ) -> None:
-        self.front_left = front_left
-        self.front_right = front_right
-        self.rear_left = rear_left
-        self.rear_right = rear_right
+        self.speed = speed
+        self.wheels = wheels
+        self.angular_velocity = angular_velocity
+
+    def ordered_wheels(self) -> tuple:
+        return (
+            self.wheels.front_left,
+            self.wheels.front_right,
+            self.wheels.rear_left,
+            self.wheels.rear_right,
+        )
 
 
-class Telemetry:
-    def __init__(
-        self, slip_ratios: WheelSlips, slip_angles: WheelSlips, yaw_rate: float
-    ) -> None:
-        self.slip_ratios = slip_ratios
-        self.slip_angles = slip_angles
-        self.yaw_rate = yaw_rate
-
-
-def idle_wheel_slips() -> WheelSlips:
-    return WheelSlips(0.0, 0.0, 0.0, 0.0)
-
-
-def idle_telemetry() -> Telemetry:
-    return Telemetry(idle_wheel_slips(), idle_wheel_slips(), 0.0)
-
-
-def read_wheel_slips(car: int, state: int) -> WheelSlips:
-    fl, fr, rl, rr = ac.getCarState(car, state)
-    return WheelSlips(fl, fr, rl, rr)
-
-
-def read_telemetry() -> Telemetry:
+def read_snapshot() -> Snapshot:
     car = ac.getFocusedCar()
-    _, yaw, _ = ac.getCarState(car, acsys.CS.LocalAngularVelocity)
-    return Telemetry(
-        read_wheel_slips(car, acsys.CS.SlipRatio),
-        read_wheel_slips(car, acsys.CS.SlipAngle),
-        math.degrees(yaw),
+    ratios = ac.getCarState(car, acsys.CS.SlipRatio)
+    angles = ac.getCarState(car, acsys.CS.SlipAngle)
+    return Snapshot(
+        ac.getCarState(car, acsys.CS.SpeedKMH),
+        Wheels(*[Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)]),
+        Rotation(*ac.getCarState(car, acsys.CS.LocalAngularVelocity)),
     )

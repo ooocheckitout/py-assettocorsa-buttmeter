@@ -25,8 +25,8 @@ def default_settings() -> Settings:
     return Settings(
         Threshold(0.05, 0.1),
         Threshold(0.05, 0.1),
-        Threshold(6.0, 10.0),
-        Threshold(30.0, 60.0),
+        Threshold(6.0, 8.0),
+        Threshold(0.2, 0.6),
     )
 
 
