@@ -11,15 +11,17 @@ def level(threshold: Threshold, value: float) -> float:
 
 
 def draw_arrow(position: Position, size: Size, yaw: float, settings: Settings) -> None:
-    middle = position.x + size.width / 2
-    neck = position.y + 20
+    third = size.width / 3
+    neck = position.y + third * 2
+
     color = Color.grey.mix(Color.red, level(settings.yaw_rate, yaw))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(middle - 4.5, neck, 9, size.height - 20)
+    ac.glQuad(position.x + third, neck, third, position.y + size.height - neck)
+
     ac.glBegin(acsys.GL.Triangles)
     ac.glVertex2f(position.x, neck)
     ac.glVertex2f(position.x + size.width, neck)
-    ac.glVertex2f(middle, position.y)
+    ac.glVertex2f(position.x + size.width / 2, position.y)
     ac.glEnd()
 
 
@@ -43,9 +45,8 @@ class WidgetApplication:
         self.settings = settings
 
     def initialize(self) -> None:
-        settings = self.settings
         self.id = ac.newApp("AlligatorRacing_Widget")
-        ac.setSize(self.id, 240, 360)
+        ac.setSize(self.id, 248, 328)
         ac.setTitle(self.id, "")
         ac.setIconPosition(self.id, 0, -10000)
         ac.drawBorder(self.id, 0)
@@ -58,21 +59,22 @@ class WidgetApplication:
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
-        tire_size = Size(55, 85)
+        tire_size = Size(64, 104)
 
-        draw_tire(Position(20, 60), tire_size, fl.slip_ratio, settings)
-        draw_tire(Position(165, 60), tire_size, fr.slip_ratio, settings)
-        draw_tire(Position(20, 215), tire_size, rl.slip_ratio, settings)
-        draw_tire(Position(165, 215), tire_size, rr.slip_ratio, settings)
+        draw_tire(Position(0, 24), tire_size, fl.slip_ratio, settings)
+        draw_tire(Position(184, 24), tire_size, fr.slip_ratio, settings)
+        draw_tire(Position(0, 200), tire_size, rl.slip_ratio, settings)
+        draw_tire(Position(184, 200), tire_size, rr.slip_ratio, settings)
 
-        line_size = Size(55, 12)
+        line_size = Size(64, 8)
 
-        draw_line(Position(20, 42), line_size, fl.slip_angle, settings)
-        draw_line(Position(165, 42), line_size, fr.slip_angle, settings)
-        draw_line(Position(20, 306), line_size, rl.slip_angle, settings)
-        draw_line(Position(165, 306), line_size, rr.slip_angle, settings)
+        draw_line(Position(0, 8), line_size, fl.slip_angle, settings)
+        draw_line(Position(184, 8), line_size, fr.slip_angle, settings)
+        draw_line(Position(0, 312), line_size, rl.slip_angle, settings)
+        draw_line(Position(184, 312), line_size, rr.slip_angle, settings)
 
-        draw_arrow(Position(105.6, 75), Size(28.8, 210), snapshot.angular_velocity.yaw, settings)
+        yaw = snapshot.angular_velocity.yaw
+        draw_arrow(Position(104.8, 24), Size(38.4, 280), yaw, settings)
 
     def render(self, _: float) -> None:
         ac.setBackgroundOpacity(self.id, 0.025)
