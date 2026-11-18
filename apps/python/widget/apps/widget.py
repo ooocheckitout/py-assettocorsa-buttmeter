@@ -36,8 +36,8 @@ def draw_tire(position: Position, size: Size, ratio: float, settings: Settings) 
     ac.glQuad(position.x, position.y, size.width, size.height)
 
 
-def draw_line(position: Position, size: Size, angle: float, settings: Settings) -> None:
-    color = Color.grey.mix(Color.white, level(settings.slip_angle, angle))
+def draw_line(position: Position, size: Size, angle: float, settings: Settings, slide_color: Color) -> None:
+    color = Color.grey.mix(slide_color, level(settings.slip_angle, angle))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     ac.glQuad(position.x, position.y, size.width, size.height)
 
@@ -73,10 +73,10 @@ class WidgetApplication:
 
         line_size = Size(64, 10)
 
-        draw_line(Position(0, 6), line_size, fl.slip_angle, settings)
-        draw_line(Position(184, 6), line_size, fr.slip_angle, settings)
-        draw_line(Position(0, 312), line_size, rl.slip_angle, settings)
-        draw_line(Position(184, 312), line_size, rr.slip_angle, settings)
+        draw_line(Position(0, 6), line_size, fl.slip_angle, settings, Color.teal)
+        draw_line(Position(184, 6), line_size, fr.slip_angle, settings, Color.teal)
+        draw_line(Position(0, 312), line_size, rl.slip_angle, settings, Color.red)
+        draw_line(Position(184, 312), line_size, rr.slip_angle, settings, Color.red)
 
         yaw = snapshot.angular_velocity.yaw
         draw_arrow(Position(104.8, 24), Size(38.4, 280), yaw, settings)

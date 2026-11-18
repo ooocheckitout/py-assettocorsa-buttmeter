@@ -24,11 +24,13 @@ class Color:
 
 
 Color.grey = Color(0.25, 0.25, 0.25, 0.8)
-Color.red = Color(1.0, 0.2, 0.2)
+Color.red = Color(1.0, 0.25, 0.3)
+Color.teal = Color(0.2, 0.85, 0.8)
 Color.purple = Color(0.6, 0.3, 1.0)
 Color.amber = Color(1.0, 0.69, 0.0)
 Color.white = Color(0.9, 0.9, 0.9, 0.85)
 Color.faint = Color(1.0, 1.0, 1.0, 0.15)
+
 
 
 class Point:

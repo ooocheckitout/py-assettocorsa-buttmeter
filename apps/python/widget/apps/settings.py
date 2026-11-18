@@ -150,8 +150,8 @@ class SettingsApplication:
 
         tick_label(self.id, Position(98, 55), "Lock")
         tick_label(self.id, Position(342, 55), "Spin")
-        tick_label(self.id, Position(98, 295), "Slide")
-        tick_label(self.id, Position(342, 295), "Slide")
+        tick_label(self.id, Position(98, 295), "Understeer")
+        tick_label(self.id, Position(342, 295), "Oversteer")
         tick_label(self.id, Position(98, 485), "Rotation")
         tick_label(self.id, Position(342, 485), "Rotation")
 
@@ -225,7 +225,7 @@ class SettingsApplication:
 
         bar_size = Size(270, 20)
         guidance_bar(Position(85, 55), bar_size, Color.purple, Color.amber)
-        guidance_bar(Position(85, 295), bar_size, Color.white, Color.white)
+        guidance_bar(Position(85, 295), bar_size, Color.teal, Color.red)
         guidance_bar(Position(85, 485), bar_size, Color.red, Color.red)
 
         fl, fr, rl, rr = snapshot.wheels
