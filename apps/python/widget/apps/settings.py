@@ -10,7 +10,7 @@ def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-def slip_ratio_bar(position: Position, size: Size) -> None:
+def guidance_bar(position: Position, size: Size) -> None:
     # purple gradient bar
     ac.glColor4f(0.6, 0.3, 1.0, 1)
     ac.glQuad(position.x, position.y, size.width * 0.1, size.height)
@@ -39,22 +39,19 @@ def slip_ratio_bar(position: Position, size: Size) -> None:
     tick_size = Size(1, size.height + 8)
     tick_position = Position(position.x - tick_size.width / 2, position.y - 4)
 
-    # fmt: off
     ac.glColor4f(0.9, 0.9, 0.9, 0.85)
     ac.glQuad(tick_position.x + size.width * 0.1, tick_position.y, tick_size.width, tick_size.height)
     ac.glQuad(tick_position.x + size.width * 0.3, tick_position.y, tick_size.width, tick_size.height)
     ac.glQuad(tick_position.x + size.width * 0.7, tick_position.y, tick_size.width, tick_size.height)
     ac.glQuad(tick_position.x + size.width * 0.9, tick_position.y, tick_size.width, tick_size.height)
-    # fmt: on
 
 
-def slip_ratio_line(position: Position, size: Size, ratio: float) -> None:
+def marker(position: Position, size: Size, ratio: float, limit: float) -> None:
     # line
     ac.glColor4f(1.0, 1.0, 1.0, 0.15)
     ac.glQuad(position.x, position.y, size.width, size.height)
 
     # marker
-    limit = 0.125
     ac.glColor4f(0.9, 0.9, 0.9, 0.85)
     ac.glQuad(position.x + size.width * (0.5 + clamp(ratio, -limit, limit) * 4) - 2, position.y + size.height / 2 - 6, 4, 12)  # fmt: skip
 
@@ -197,18 +194,26 @@ class SettingsApplication:
         self.listeners.extend((on_minus, on_plus))
 
     def on_lock_change(self, threshold: Threshold) -> None:
-        pass
+        self.lock = threshold
 
     def on_spin_change(self, threshold: Threshold) -> None:
-        pass
+        self.spin = threshold
 
     def layout(self, snapshot: Snapshot) -> None:
-        slip_ratio_bar(Position(85, 40), Size(270, 20))
+        guidance_bar(Position(85, 40), Size(270, 20))
+
         fl, fr, rl, rr = snapshot.wheels
-        slip_ratio_line(Position(85, 77), Size(270, 2), fl.slip_ratio)
-        slip_ratio_line(Position(85, 93), Size(270, 2), fr.slip_ratio)
-        slip_ratio_line(Position(85, 109), Size(270, 2), rl.slip_ratio)
-        slip_ratio_line(Position(85, 125), Size(270, 2), rr.slip_ratio)
+        marker(Position(85, 77), Size(270, 2), fl.slip_ratio, 0.125)
+        marker(Position(85, 93), Size(270, 2), fr.slip_ratio, 0.125)
+        marker(Position(85, 109), Size(270, 2), rl.slip_ratio, 0.125)
+        marker(Position(85, 125), Size(270, 2), rr.slip_ratio, 0.125)
+
+        marker(Position(85, 177), Size(270, 2), fl.slip_angle, 12.5)
+        marker(Position(85, 193), Size(270, 2), fr.slip_angle, 12.5)
+        marker(Position(85, 209), Size(270, 2), rl.slip_angle, 12.5)
+        marker(Position(85, 225), Size(270, 2), rr.slip_angle, 12.5)
+
+        marker(Position(85, 277), Size(270, 2), snapshot.angular_velocity.yaw, 1.25)
 
     def render(self, _: float) -> None:
         snapshot = read_snapshot()
