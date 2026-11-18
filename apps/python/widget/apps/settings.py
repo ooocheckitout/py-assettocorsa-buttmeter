@@ -114,7 +114,7 @@ class SettingsApplication:
         self.settings = settings
 
     def initialize(self) -> None:
-        self.id = ac.newApp("AlligatorRacing_Settings")
+        self.id = ac.newApp("Butt Meter Settings")
 
         ac.setSize(self.id, 456, 832)
 

@@ -95,7 +95,7 @@ class WidgetApplication:
         self.settings = settings
 
     def initialize(self) -> None:
-        self.id = ac.newApp("AlligatorRacing_Widget")
+        self.id = ac.newApp("Butt Meter")
         ac.setTitle(self.id, "")
         ac.setIconPosition(self.id, 0, -10000)
         ac.drawBorder(self.id, 0)
