@@ -144,9 +144,16 @@ class SettingsApplication:
         bar_label(self.id, Position(10, 295), "Slip angle")
         bar_label(self.id, Position(10, 485), "Yaw rate")
 
-        tick_label(self.id, Position(220, 55), "0")
-        tick_label(self.id, Position(220, 295), "0")
-        tick_label(self.id, Position(220, 485), "0")
+        tick_label(self.id, Position(220, 55), "Grip")
+        tick_label(self.id, Position(220, 295), "Grip")
+        tick_label(self.id, Position(220, 485), "Straight")
+
+        tick_label(self.id, Position(98, 55), "Lock")
+        tick_label(self.id, Position(342, 55), "Spin")
+        tick_label(self.id, Position(98, 295), "Slide")
+        tick_label(self.id, Position(342, 295), "Slide")
+        tick_label(self.id, Position(98, 485), "Rotation")
+        tick_label(self.id, Position(342, 485), "Rotation")
 
         marker_label(self.id, Position(10, 92), "FL")
         marker_label(self.id, Position(10, 108), "FR")
@@ -188,7 +195,7 @@ class SettingsApplication:
             on_change(value)
             ac.setText(value_label, "{:.2f}".format(value))
 
-        step: float = 0.01
+        step = 0.01
         on_minus = lambda x, y: change(-step)
         on_plus = lambda x, y: change(step)
 
