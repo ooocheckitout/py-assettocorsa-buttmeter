@@ -13,12 +13,14 @@ class Settings:
         self,
         lock: Threshold,
         spin: Threshold,
-        slip_angle: Threshold,
+        understeer: Threshold,
+        oversteer: Threshold,
         yaw_rate: Threshold,
     ) -> None:
         self.lock = lock
         self.spin = spin
-        self.slip_angle = slip_angle
+        self.understeer = understeer
+        self.oversteer = oversteer
         self.yaw_rate = yaw_rate
 
 

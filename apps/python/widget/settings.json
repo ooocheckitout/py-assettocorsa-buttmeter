@@ -3,13 +3,17 @@
     "end": 0.1, 
     "start": 0.05
   }, 
-  "slip_angle": {
+  "oversteer": {
     "end": 8.0, 
     "start": 6.0
   }, 
   "spin": {
     "end": 0.1, 
     "start": 0.05
+  }, 
+  "understeer": {
+    "end": 8.0, 
+    "start": 6.0
   }, 
   "yaw_rate": {
     "end": 0.6, 
