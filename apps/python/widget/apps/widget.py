@@ -6,6 +6,8 @@ from telemetry import Snapshot, read_snapshot
 
 
 def level(threshold: Threshold, value: float) -> float:
+    if threshold.end <= threshold.start:
+        return 1.0 if abs(value) >= threshold.start else 0.0
     level = (abs(value) - threshold.start) / (threshold.end - threshold.start)
     return max(0.0, min(level, 1.0))
 

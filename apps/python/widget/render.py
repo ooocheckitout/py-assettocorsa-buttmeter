@@ -2,7 +2,6 @@ import ac, acsys
 
 from abc import ABCMeta, abstractmethod
 
-from settings import Threshold
 from telemetry import Snapshot
 
 
@@ -66,10 +65,6 @@ class Component(metaclass=ABCMeta):
     @staticmethod
     def paint(color: Color) -> None:
         ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-
-    @staticmethod
-    def shade(threshold: Threshold, color: Color, value: float) -> Color:
-        return Color.grey.mix(color, threshold.level(value))
 
     @staticmethod
     def fill(slot: Slot, color: Color) -> None:

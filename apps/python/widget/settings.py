@@ -7,10 +7,6 @@ class Threshold:
         self.start = start
         self.end = end
 
-    def level(self, value: float) -> float:
-        level = (abs(value) - self.start) / (self.end - self.start)
-        return max(0.0, min(level, 1.0))
-
 
 class Settings:
     def __init__(
