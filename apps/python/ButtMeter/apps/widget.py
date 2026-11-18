@@ -60,11 +60,11 @@ def level(threshold: Threshold, value: float) -> float:
     return max(0.0, min(level, 1.0))
 
 
-def draw_arrow(position: Position, size: Size, yaw: float, settings: Settings) -> None:
+def draw_arrow(position: Position, size: Size, slip: float, settings: Settings) -> None:
     third = size.width / 3
     neck = position.y + third * 2
 
-    color = Color.grey.mix(Color.red, level(settings.yaw_rate, yaw))
+    color = Color.grey.mix(Color.red, level(settings.body_slip, slip))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     ac.glQuad(position.x + third, neck, third, position.y + size.height - neck)
 
@@ -161,5 +161,4 @@ class WidgetApplication:
         draw_line(Position(0, 24 + 312 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
         draw_line(Position(184 * scale, 24 + 312 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
 
-        yaw = snapshot.angular_velocity.yaw
-        draw_arrow(Position(104.8 * scale, 24 + 24 * scale), Size(38.4 * scale, 280 * scale), yaw, settings)
+        draw_arrow(Position(104.8 * scale, 24 + 24 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)

@@ -15,14 +15,14 @@ class Settings:
         spin: Threshold,
         understeer: Threshold,
         oversteer: Threshold,
-        yaw_rate: Threshold,
+        body_slip: Threshold,
         scale: float,
     ) -> None:
         self.lock = lock
         self.spin = spin
         self.understeer = understeer
         self.oversteer = oversteer
-        self.yaw_rate = yaw_rate
+        self.body_slip = body_slip
         self.scale = scale
 
     @staticmethod
@@ -32,7 +32,7 @@ class Settings:
             spin=Threshold(**saved["spin"]),
             understeer=Threshold(**saved["understeer"]),
             oversteer=Threshold(**saved["oversteer"]),
-            yaw_rate=Threshold(**saved["yaw_rate"]),
+            body_slip=Threshold(**saved["body_slip"]),
             scale=saved["scale"],
         )
 
@@ -42,7 +42,7 @@ class Settings:
             "spin": vars(self.spin),
             "understeer": vars(self.understeer),
             "oversteer": vars(self.oversteer),
-            "yaw_rate": vars(self.yaw_rate),
+            "body_slip": vars(self.body_slip),
             "scale": self.scale,
         }
 
@@ -53,7 +53,7 @@ def default_settings() -> Settings:
         spin=Threshold(0.05, 0.1),
         understeer=Threshold(6.0, 8.0),
         oversteer=Threshold(6.0, 8.0),
-        yaw_rate=Threshold(0.2, 0.6),
+        body_slip=Threshold(3.0, 6.0),
         scale=1.0,
     )
 

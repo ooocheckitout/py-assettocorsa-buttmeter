@@ -1,3 +1,5 @@
+import math
+
 import ac, acsys
 
 
@@ -15,18 +17,18 @@ class Wheels:
         self.rear_right = rr
 
 
-class Rotation:
-    def __init__(self, pitch: float, yaw: float, roll: float) -> None:
-        self.pitch = pitch
-        self.yaw = yaw
-        self.roll = roll
+def body_slip(velocity: list) -> float:
+    lateral, _, forward = velocity
+    if math.hypot(lateral, forward) < 2.0:
+        return 0.0
+    return math.degrees(math.atan2(lateral, forward))
 
 
 class Snapshot:
-    def __init__(self, speed: float, wheels: list, angular_velocity: Rotation) -> None:
+    def __init__(self, speed: float, wheels: list, body_slip: float) -> None:
         self.speed = speed
         self.wheels = wheels
-        self.angular_velocity = angular_velocity
+        self.body_slip = body_slip
 
 
 def read_snapshot() -> Snapshot:
@@ -36,5 +38,5 @@ def read_snapshot() -> Snapshot:
     return Snapshot(
         ac.getCarState(car, acsys.CS.SpeedKMH),
         [Wheel(ratio, angle) for ratio, angle in zip(ratios, angles)],
-        Rotation(*ac.getCarState(car, acsys.CS.LocalAngularVelocity)),
+        body_slip(ac.getCarState(car, acsys.CS.LocalVelocity)),
     )

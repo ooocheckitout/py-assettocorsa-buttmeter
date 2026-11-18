@@ -124,12 +124,12 @@ class SettingsApplication:
         self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, self.on_spin_change)
         self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, self.on_understeer_change)
         self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, self.on_oversteer_change)
-        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.yaw_rate, self.on_yaw_rate_change)
+        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, self.on_body_slip_change)
 
         bar_label(self.id, Position(16, 64), "Slip ratio")
         bar_label(self.id, Position(16, 332), "Slip angle")
         bar_label(self.id, Position(16, 520), "Slip angle")
-        bar_label(self.id, Position(16, 708), "Yaw rate")
+        bar_label(self.id, Position(16, 708), "Body slip")
 
         tick_label_center(self.id, Position(280, 64), "Grip")
         tick_label_center(self.id, Position(280, 332), "Grip")
@@ -156,7 +156,7 @@ class SettingsApplication:
         marker_label(self.id, Position(24, 560), "RL")
         marker_label(self.id, Position(24, 576), "RR")
 
-        marker_label(self.id, Position(24, 748), "Yaw")
+        marker_label(self.id, Position(24, 748), "Slip")
 
         # AC does not hold a reference to callbacks, so keep the bound method alive
         self.callback = self.render
@@ -229,8 +229,8 @@ class SettingsApplication:
         self.settings.oversteer = threshold
         save_settings(self.settings)
 
-    def on_yaw_rate_change(self, threshold: Threshold) -> None:
-        self.settings.yaw_rate = threshold
+    def on_body_slip_change(self, threshold: Threshold) -> None:
+        self.settings.body_slip = threshold
         save_settings(self.settings)
 
     def render(self, _: float) -> None:
@@ -255,4 +255,4 @@ class SettingsApplication:
         marker(Position(120, 560), marker_size, rl.slip_angle, 12.5)
         marker(Position(120, 576), marker_size, rr.slip_angle, 12.5)
 
-        marker(Position(120, 748), marker_size, snapshot.angular_velocity.yaw, 1.25)
+        marker(Position(120, 748), marker_size, snapshot.body_slip, 12.5)
