@@ -1,8 +1,56 @@
 import ac, acsys
 
 from render import Color, Position, Size
-from settings import Settings, Threshold
-from telemetry import Snapshot, read_snapshot
+from settings import Settings, Threshold, save_settings
+from telemetry import read_snapshot
+
+SCALES = (0.5, 2 / 3, 1.0)
+
+
+def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertical: float) -> None:
+    tip = Position(
+        position.x + (size.width if horizontal > 0 else 0),
+        position.y + (size.height if vertical > 0 else 0),
+    )
+    width = -horizontal * size.width
+    height = -vertical * size.height
+
+    # arrowhead, tip in the corner the arrow points to
+    ac.glBegin(acsys.GL.Triangles)
+    ac.glVertex2f(tip.x + width * 0.0556, tip.y + height * 0.0556)
+    ac.glVertex2f(tip.x + width * 0.8333, tip.y + height * 0.0556)
+    ac.glVertex2f(tip.x + width * 0.0556, tip.y + height * 0.8333)
+    ac.glEnd()
+    # shaft, from the opposite corner to the neck
+    ac.glBegin(acsys.GL.Quads)
+    ac.glVertex2f(tip.x + width * 1.0230, tip.y + height * 0.8659)
+    ac.glVertex2f(tip.x + width * 0.5230, tip.y + height * 0.3659)
+    ac.glVertex2f(tip.x + width * 0.3659, tip.y + height * 0.5230)
+    ac.glVertex2f(tip.x + width * 0.8659, tip.y + height * 1.0230)
+    ac.glEnd()
+
+
+def draw_grow_icon(position: Position, size: Size) -> None:
+    ac.glColor4f(Color.white.red, Color.white.green, Color.white.blue, Color.white.alpha)
+    half = Size(size.width / 2, size.height / 2)
+    draw_corner_arrow(position, half, -1, -1)
+    draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1)
+
+
+def draw_shrink_icon(position: Position, size: Size) -> None:
+    ac.glColor4f(Color.white.red, Color.white.green, Color.white.blue, Color.white.alpha)
+    half = Size(size.width / 2, size.height / 2)
+    draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1)
+    draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1)
+
+
+def scale_button(app_id: int, on_click: object) -> int:
+    button = ac.addButton(app_id, "")
+    ac.drawBorder(button, 0)
+    ac.setBackgroundOpacity(button, 0)
+    ac.setSize(button, 18, 18)
+    ac.addOnClickedListener(button, on_click)
+    return button
 
 
 def level(threshold: Threshold, value: float) -> float:
@@ -48,14 +96,43 @@ class WidgetApplication:
 
     def initialize(self) -> None:
         self.id = ac.newApp("AlligatorRacing_Widget")
-        ac.setSize(self.id, 248, 328)
         ac.setTitle(self.id, "")
         ac.setIconPosition(self.id, 0, -10000)
         ac.drawBorder(self.id, 0)
 
+        self.listeners = []
+
+        self.scale_buttons(self.on_scale_change)
+        self.update_scale_buttons(self.settings.scale)
+
         # AC does not hold a reference to callbacks, so keep the bound method alive
         self.callback = self.render
         ac.addRenderCallback(self.id, self.callback)
+
+    def scale_buttons(self, on_change: object) -> None:
+        def on_grow(x: float, y: float) -> None:
+            index = SCALES.index(self.settings.scale) + 1
+            on_change(SCALES[index])
+
+        def on_shrink(x: float, y: float) -> None:
+            index = SCALES.index(self.settings.scale) - 1
+            on_change(SCALES[index])
+
+        self.grow_button = scale_button(self.id, on_grow)
+        self.shrink_button = scale_button(self.id, on_shrink)
+
+        self.listeners.extend((on_grow, on_shrink))
+
+    def on_scale_change(self, scale: float) -> None:
+        self.settings.scale = scale
+        save_settings(self.settings)
+
+    def update_scale_buttons(self, scale: float):
+        ac.setSize(self.id, 248 * scale, 24 + 328 * scale)
+        ac.setPosition(self.grow_button, 248 * scale - 80, 3)
+        ac.setPosition(self.shrink_button, 248 * scale - 54, 3)
+        ac.setVisible(self.grow_button, scale != SCALES[-1])
+        ac.setVisible(self.shrink_button, scale != SCALES[0])
 
     def render(self, _: float) -> None:
         ac.setBackgroundOpacity(self.id, 0.025)
@@ -63,20 +140,26 @@ class WidgetApplication:
 
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
+        scale = settings.scale
 
-        tire_size = Size(64, 104)
+        if scale != SCALES[-1]:
+            draw_grow_icon(Position(248 * scale - 80, 3), Size(18, 18))
+        if scale != SCALES[0]:
+            draw_shrink_icon(Position(248 * scale - 54, 3), Size(18, 18))
 
-        draw_tire(Position(0, 24), tire_size, fl.slip_ratio, settings)
-        draw_tire(Position(184, 24), tire_size, fr.slip_ratio, settings)
-        draw_tire(Position(0, 200), tire_size, rl.slip_ratio, settings)
-        draw_tire(Position(184, 200), tire_size, rr.slip_ratio, settings)
+        tire_size = Size(64 * scale, 104 * scale)
 
-        line_size = Size(64, 10)
+        draw_tire(Position(0, 24 + 24 * scale), tire_size, fl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 24 * scale), tire_size, fr.slip_ratio, settings)
+        draw_tire(Position(0, 24 + 200 * scale), tire_size, rl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 200 * scale), tire_size, rr.slip_ratio, settings)
 
-        draw_line(Position(0, 6), line_size, fl.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(184, 6), line_size, fr.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(0, 312), line_size, rl.slip_angle, settings.oversteer, Color.red)
-        draw_line(Position(184, 312), line_size, rr.slip_angle, settings.oversteer, Color.red)
+        line_size = Size(64 * scale, 10 * scale)
+
+        draw_line(Position(0, 24 + 6 * scale), line_size, fl.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(184 * scale, 24 + 6 * scale), line_size, fr.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(0, 24 + 312 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
+        draw_line(Position(184 * scale, 24 + 312 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
 
         yaw = snapshot.angular_velocity.yaw
-        draw_arrow(Position(104.8, 24), Size(38.4, 280), yaw, settings)
+        draw_arrow(Position(104.8 * scale, 24 + 24 * scale), Size(38.4 * scale, 280 * scale), yaw, settings)

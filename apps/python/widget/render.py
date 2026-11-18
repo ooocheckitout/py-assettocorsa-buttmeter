@@ -6,9 +6,7 @@ from telemetry import Snapshot
 
 
 class Color:
-    def __init__(
-        self, red: float, green: float, blue: float, alpha: float = 1
-    ) -> None:
+    def __init__(self, red: float, green: float, blue: float, alpha: float = 1) -> None:
         self.red = red
         self.green = green
         self.blue = blue
@@ -29,8 +27,6 @@ Color.teal = Color(0.2, 0.85, 0.8)
 Color.purple = Color(0.6, 0.3, 1.0)
 Color.amber = Color(1.0, 0.69, 0.0)
 Color.white = Color(0.9, 0.9, 0.9, 0.85)
-Color.faint = Color(1.0, 1.0, 1.0, 0.15)
-
 
 
 class Point:
@@ -82,9 +78,7 @@ class Component(metaclass=ABCMeta):
         ac.glEnd()
 
     @staticmethod
-    def grid(
-        area: Slot, columns: int, rows: int, column_gap: float, row_gap: float
-    ) -> list:
+    def grid(area: Slot, columns: int, rows: int, column_gap: float, row_gap: float) -> list:
         width = (area.width - column_gap * (columns - 1)) / columns
         height = (area.height - row_gap * (rows - 1)) / rows
 

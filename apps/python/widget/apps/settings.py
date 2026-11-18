@@ -2,7 +2,7 @@ import ac, acsys
 
 from render import Color, Position, Size
 from settings import Settings, Threshold, save_settings
-from telemetry import Snapshot, read_snapshot
+from telemetry import read_snapshot
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -69,7 +69,7 @@ def bar_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "left")
 
 
-def left_tick_label(app_id: int, position: Position, text: str) -> None:
+def tick_label_left(app_id: int, position: Position, text: str) -> None:
     label = ac.addLabel(app_id, text)
     ac.setPosition(label, position.x, position.y - 24)
     ac.setSize(label, 100, 16)
@@ -77,7 +77,7 @@ def left_tick_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "left")
 
 
-def center_tick_label(app_id: int, position: Position, text: str) -> None:
+def tick_label_center(app_id: int, position: Position, text: str) -> None:
     label = ac.addLabel(app_id, text)
     ac.setPosition(label, position.x - 50, position.y - 24)
     ac.setSize(label, 100, 16)
@@ -85,7 +85,7 @@ def center_tick_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "center")
 
 
-def right_tick_label(app_id: int, position: Position, text: str) -> None:
+def tick_label_right(app_id: int, position: Position, text: str) -> None:
     label = ac.addLabel(app_id, text)
     ac.setPosition(label, position.x - 100, position.y - 24)
     ac.setSize(label, 100, 16)
@@ -107,37 +107,6 @@ def threshold_label(app_id: int, position: Position, text: str) -> None:
     ac.setSize(label, 88, 16)
     ac.setFontSize(label, 14)
     ac.setFontAlignment(label, "left")
-
-
-def stepper_title_label(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x, position.y - 20)
-    ac.setSize(label, 100, 16)
-    ac.setFontSize(label, 12)
-    ac.setFontAlignment(label, "center")
-
-
-def stepper_value_label(app_id: int, position: Position, text: str) -> int:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x + 20, position.y + 2)
-    ac.setSize(label, 60, 16)
-    ac.setFontSize(label, 14)
-    ac.setFontAlignment(label, "center")
-    return label
-
-
-def stepper_minus_button(app_id: int, position: Position, on_click: object) -> None:
-    button = ac.addButton(app_id, "-")
-    ac.setPosition(button, position.x, position.y)
-    ac.setSize(button, 20, 20)
-    ac.addOnClickedListener(button, on_click)
-
-
-def stepper_plus_button(app_id: int, position: Position, on_click: object) -> None:
-    button = ac.addButton(app_id, "+")
-    ac.setPosition(button, position.x + 80, position.y)
-    ac.setSize(button, 20, 20)
-    ac.addOnClickedListener(button, on_click)
 
 
 class SettingsApplication:
@@ -162,19 +131,19 @@ class SettingsApplication:
         bar_label(self.id, Position(16, 520), "Slip angle")
         bar_label(self.id, Position(16, 708), "Yaw rate")
 
-        center_tick_label(self.id, Position(280, 64), "Grip")
-        center_tick_label(self.id, Position(280, 332), "Grip")
-        center_tick_label(self.id, Position(280, 520), "Grip")
-        center_tick_label(self.id, Position(280, 708), "Straight")
+        tick_label_center(self.id, Position(280, 64), "Grip")
+        tick_label_center(self.id, Position(280, 332), "Grip")
+        tick_label_center(self.id, Position(280, 520), "Grip")
+        tick_label_center(self.id, Position(280, 708), "Straight")
 
-        left_tick_label(self.id, Position(120, 64), "Lock")
-        right_tick_label(self.id, Position(440, 64), "Spin")
-        left_tick_label(self.id, Position(120, 332), "Understeer")
-        right_tick_label(self.id, Position(440, 332), "Understeer")
-        left_tick_label(self.id, Position(120, 520), "Oversteer")
-        right_tick_label(self.id, Position(440, 520), "Oversteer")
-        left_tick_label(self.id, Position(120, 708), "Rotation")
-        right_tick_label(self.id, Position(440, 708), "Rotation")
+        tick_label_left(self.id, Position(120, 64), "Lock")
+        tick_label_right(self.id, Position(440, 64), "Spin")
+        tick_label_left(self.id, Position(120, 332), "Understeer")
+        tick_label_right(self.id, Position(440, 332), "Understeer")
+        tick_label_left(self.id, Position(120, 520), "Oversteer")
+        tick_label_right(self.id, Position(440, 520), "Oversteer")
+        tick_label_left(self.id, Position(120, 708), "Rotation")
+        tick_label_right(self.id, Position(440, 708), "Rotation")
 
         marker_label(self.id, Position(24, 104), "FL")
         marker_label(self.id, Position(24, 120), "FR")
@@ -208,8 +177,17 @@ class SettingsApplication:
         self.stepper(Position(position.x + 316, position.y), "end", threshold.end, on_end_change)
 
     def stepper(self, position: Position, title: str, value: float, on_change: object) -> None:
-        stepper_title_label(self.id, position, title)
-        value_label = stepper_value_label(self.id, position, "{:.2f}".format(value))
+        title_label = ac.addLabel(self.id, title)
+        ac.setPosition(title_label, position.x, position.y - 20)
+        ac.setSize(title_label, 100, 16)
+        ac.setFontSize(title_label, 12)
+        ac.setFontAlignment(title_label, "center")
+
+        value_label = ac.addLabel(self.id, "{:.2f}".format(value))
+        ac.setPosition(value_label, position.x + 20, position.y + 2)
+        ac.setSize(value_label, 60, 16)
+        ac.setFontSize(value_label, 14)
+        ac.setFontAlignment(value_label, "center")
 
         def change(delta: float) -> None:
             nonlocal value
@@ -221,8 +199,17 @@ class SettingsApplication:
         on_minus = lambda x, y: change(-step)
         on_plus = lambda x, y: change(step)
 
-        stepper_minus_button(self.id, position, on_minus)
-        stepper_plus_button(self.id, position, on_plus)
+        button_size = Size(20, 20)
+
+        minus_button = ac.addButton(self.id, "-")
+        ac.setPosition(minus_button, position.x, position.y)
+        ac.setSize(minus_button, button_size.width, button_size.height)
+        ac.addOnClickedListener(minus_button, on_minus)
+
+        plus_button = ac.addButton(self.id, "+")
+        ac.setPosition(plus_button, position.x + 80, position.y)
+        ac.setSize(plus_button, button_size.width, button_size.height)
+        ac.addOnClickedListener(plus_button, on_plus)
 
         self.listeners.extend((on_minus, on_plus))
 
