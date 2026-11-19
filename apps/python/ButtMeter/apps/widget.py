@@ -81,13 +81,127 @@ def draw_tire(position: Position, size: Size, ratio: float, settings: Settings) 
     else:
         color = Color.grey.mix(Color.amber, level(settings.spin, ratio))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(position.x, position.y, size.width, size.height)
+    # middle column, full height
+    ac.glQuad(position.x + size.width * 0.125, position.y, size.width * 0.75, size.height)
+    # left column, between the corners
+    ac.glQuad(position.x, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+    # right column, between the corners
+    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+
+    ac.glBegin(acsys.GL.Quads)
+    # top left corner, left edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0095, position.y + size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.width * 0.0366)
+    # top left corner, top edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.0772, position.y + size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.125, position.y)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # top right corner, top edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.875, position.y)
+    ac.glVertex2f(position.x + size.width * 0.9228, position.y + size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.width * 0.0366)
+    # top right corner, right edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.9905, position.y + size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width, position.y + size.width * 0.125)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # bottom right corner, right edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9905, position.y + size.height - size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.height - size.width * 0.0366)
+    # bottom right corner, bottom edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.height - size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.9228, position.y + size.height - size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # bottom left corner, bottom edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height)
+    ac.glVertex2f(position.x + size.width * 0.0772, position.y + size.height - size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.height - size.width * 0.0366)
+    # bottom left corner, left edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.height - size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.0095, position.y + size.height - size.width * 0.0772)
+    ac.glVertex2f(position.x, position.y + size.height - size.width * 0.125)
+    ac.glEnd()
 
 
 def draw_line(position: Position, size: Size, angle: float, threshold: Threshold, slide_color: Color) -> None:
     color = Color.grey.mix(slide_color, level(threshold, angle))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(position.x, position.y, size.width, size.height)
+    # middle column, full height
+    ac.glQuad(position.x + size.width * 0.125, position.y, size.width * 0.75, size.height)
+    # left column, between the corners
+    ac.glQuad(position.x, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+    # right column, between the corners
+    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+
+    ac.glBegin(acsys.GL.Quads)
+    # top left corner, left edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0095, position.y + size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.width * 0.0366)
+    # top left corner, top edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.0772, position.y + size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.125, position.y)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # top right corner, top edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.875, position.y)
+    ac.glVertex2f(position.x + size.width * 0.9228, position.y + size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.width * 0.0366)
+    # top right corner, right edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.9905, position.y + size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width, position.y + size.width * 0.125)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # bottom right corner, right edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9905, position.y + size.height - size.width * 0.0772)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.height - size.width * 0.0366)
+    # bottom right corner, bottom edge half
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.9634, position.y + size.height - size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.9228, position.y + size.height - size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.875, position.y + size.height)
+    ac.glEnd()
+
+    ac.glBegin(acsys.GL.Quads)
+    # bottom left corner, bottom edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height)
+    ac.glVertex2f(position.x + size.width * 0.0772, position.y + size.height - size.width * 0.0095)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.height - size.width * 0.0366)
+    # bottom left corner, left edge half
+    ac.glVertex2f(position.x + size.width * 0.125, position.y + size.height - size.width * 0.125)
+    ac.glVertex2f(position.x + size.width * 0.0366, position.y + size.height - size.width * 0.0366)
+    ac.glVertex2f(position.x + size.width * 0.0095, position.y + size.height - size.width * 0.0772)
+    ac.glVertex2f(position.x, position.y + size.height - size.width * 0.125)
+    ac.glEnd()
 
 
 class WidgetApplication:
@@ -128,7 +242,7 @@ class WidgetApplication:
         save_settings(self.settings)
 
     def update_scale_buttons(self, scale: float):
-        ac.setSize(self.id, 248 * scale, 24 + 328 * scale)
+        ac.setSize(self.id, 248 * scale, 24 + 336 * scale)
         ac.setPosition(self.grow_button, 248 * scale - 80, 3)
         ac.setPosition(self.shrink_button, 248 * scale - 54, 3)
         ac.setVisible(self.grow_button, scale != SCALES[-1])
@@ -149,16 +263,16 @@ class WidgetApplication:
 
         tire_size = Size(64 * scale, 104 * scale)
 
-        draw_tire(Position(0, 24 + 24 * scale), tire_size, fl.slip_ratio, settings)
-        draw_tire(Position(184 * scale, 24 + 24 * scale), tire_size, fr.slip_ratio, settings)
-        draw_tire(Position(0, 24 + 200 * scale), tire_size, rl.slip_ratio, settings)
-        draw_tire(Position(184 * scale, 24 + 200 * scale), tire_size, rr.slip_ratio, settings)
+        draw_tire(Position(0, 24 + 28 * scale), tire_size, fl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 28 * scale), tire_size, fr.slip_ratio, settings)
+        draw_tire(Position(0, 24 + 204 * scale), tire_size, rl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 204 * scale), tire_size, rr.slip_ratio, settings)
 
-        line_size = Size(64 * scale, 10 * scale)
+        line_size = Size(64 * scale, 20 * scale)
 
-        draw_line(Position(0, 24 + 6 * scale), line_size, fl.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(184 * scale, 24 + 6 * scale), line_size, fr.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(0, 24 + 312 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
-        draw_line(Position(184 * scale, 24 + 312 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
+        draw_line(Position(0, 24), line_size, fl.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(184 * scale, 24), line_size, fr.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(0, 24 + 316 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
+        draw_line(Position(184 * scale, 24 + 316 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
 
-        draw_arrow(Position(104.8 * scale, 24 + 24 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)
+        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)
