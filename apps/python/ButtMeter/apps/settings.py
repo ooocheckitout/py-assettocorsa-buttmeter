@@ -120,11 +120,11 @@ class SettingsApplication:
 
         self.listeners = []
 
-        self.threshold_steppers(Position(24, 200), "Lock", self.settings.lock, self.on_lock_change)
-        self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, self.on_spin_change)
-        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, self.on_understeer_change)
-        self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, self.on_oversteer_change)
-        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, self.on_body_slip_change)
+        self.threshold_steppers(Position(24, 200), "Lock", self.settings.lock, 0.01, self.on_lock_change)
+        self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, 0.01, self.on_spin_change)
+        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, 1.0, self.on_understeer_change)
+        self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, 1.0, self.on_oversteer_change)
+        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, 1.0, self.on_body_slip_change)
 
         bar_label(self.id, Position(16, 64), "Slip ratio")
         bar_label(self.id, Position(16, 332), "Slip angle")
@@ -162,7 +162,7 @@ class SettingsApplication:
         self.callback = self.render
         ac.addRenderCallback(self.id, self.callback)
 
-    def threshold_steppers(self, position: Position, title: str, threshold: Threshold, on_change: object) -> None:
+    def threshold_steppers(self, position: Position, title: str, threshold: Threshold, step: float, on_change: object) -> None:
         threshold_label(self.id, position, title)
 
         def on_start_change(value: float) -> None:
@@ -173,10 +173,10 @@ class SettingsApplication:
             threshold.end = value
             on_change(threshold)
 
-        self.stepper(Position(position.x + 96, position.y), "start", threshold.start, on_start_change)
-        self.stepper(Position(position.x + 316, position.y), "end", threshold.end, on_end_change)
+        self.stepper(Position(position.x + 96, position.y), "start", threshold.start, step, on_start_change)
+        self.stepper(Position(position.x + 316, position.y), "end", threshold.end, step, on_end_change)
 
-    def stepper(self, position: Position, title: str, value: float, on_change: object) -> None:
+    def stepper(self, position: Position, title: str, value: float, step: float, on_change: object) -> None:
         title_label = ac.addLabel(self.id, title)
         ac.setPosition(title_label, position.x, position.y - 20)
         ac.setSize(title_label, 100, 16)
@@ -195,7 +195,6 @@ class SettingsApplication:
             on_change(value)
             ac.setText(value_label, "{:.2f}".format(value))
 
-        step = 0.01
         on_minus = lambda x, y: change(-step)
         on_plus = lambda x, y: change(step)
 
