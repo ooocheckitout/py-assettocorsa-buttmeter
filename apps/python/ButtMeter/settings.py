@@ -16,10 +16,14 @@ class Threshold:
         return max(0.0, min(level, 1.0))
 
 
-def slip_fill(value: float, negative: Threshold, positive: Threshold, negative_color: Color, positive_color: Color) -> Color:  # fmt: skip
-    if value < 0:
-        return Color.grey.mix(negative_color, negative.level(value))
-    return Color.grey.mix(positive_color, positive.level(value))
+def threshold_fill(value: float, threshold: Threshold, color: Color) -> Color:
+    return Color.grey.mix(color, threshold.level(value))
+
+
+def slip_ratio_fill(slip_ratio: float, lock: Threshold, spin: Threshold) -> Color:
+    if slip_ratio < 0:
+        return threshold_fill(slip_ratio, lock, Color.purple)
+    return threshold_fill(slip_ratio, spin, Color.amber)
 
 
 class Settings:

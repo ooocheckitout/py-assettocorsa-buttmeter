@@ -1,7 +1,7 @@
 import ac, os
 
 from render import Color, Position, Size
-from settings import Settings, save_settings, slip_fill
+from settings import Settings, save_settings, slip_ratio_fill, threshold_fill
 from telemetry import read_snapshot
 
 SCALES = (0.5, 2 / 3, 1.0)
@@ -112,15 +112,15 @@ class WidgetApplication:
         shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
         draw_icon(Position(248 * scale - 54, 3), shrink_color, self.shrink_texture)
 
-        draw_line(Position(0, 30), scale, slip_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 30), scale, slip_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30), scale, threshold_fill(fl.slip_angle, settings.understeer, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30), scale, threshold_fill(fr.slip_angle, settings.understeer, Color.teal), self.line_texture)  # fmt: skip
 
-        draw_tire(Position(0, 30 + 28 * scale), scale, slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
-        draw_arrow(Position(104.8 * scale, 30 + 28 * scale), scale, slip_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red), self.arrow_texture)  # fmt: skip
-        draw_tire(Position(184 * scale, 30 + 28 * scale), scale, slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(0, 30 + 28 * scale), scale, slip_ratio_fill(fl.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
+        draw_arrow(Position(104.8 * scale, 30 + 28 * scale), scale, threshold_fill(snapshot.body_slip, settings.body_slip, Color.red), self.arrow_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 30 + 28 * scale), scale, slip_ratio_fill(fr.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
 
-        draw_tire(Position(0, 30 + 204 * scale), scale, slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
-        draw_tire(Position(184 * scale, 30 + 204 * scale), scale, slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(0, 30 + 204 * scale), scale, slip_ratio_fill(rl.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 30 + 204 * scale), scale, slip_ratio_fill(rr.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
 
-        draw_line(Position(0, 30 + 316 * scale), scale, slip_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 30 + 316 * scale), scale, slip_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30 + 316 * scale), scale, threshold_fill(rl.slip_angle, settings.oversteer, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30 + 316 * scale), scale, threshold_fill(rr.slip_angle, settings.oversteer, Color.red), self.line_texture)  # fmt: skip
