@@ -1,4 +1,4 @@
-import ac, acsys, os
+import ac, os
 
 from render import Color, Position, Size
 from settings import Settings, save_settings, slip_fill
@@ -16,42 +16,10 @@ def scale_button(app_id: int, on_click: object) -> int:
     return button
 
 
-def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertical: float, color: Color) -> None:
+def draw_icon(position: Position, color: Color, texture: int) -> None:
+    size = Size(18, 18)
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    tip = Position(
-        position.x + (size.width if horizontal > 0 else 0),
-        position.y + (size.height if vertical > 0 else 0),
-    )
-    width = -horizontal * size.width
-    height = -vertical * size.height
-
-    # arrowhead, tip in the corner the arrow points to
-    ac.glBegin(acsys.GL.Triangles)
-    ac.glVertex2f(tip.x + width * 0.0556, tip.y + height * 0.0556)
-    ac.glVertex2f(tip.x + width * 0.8333, tip.y + height * 0.0556)
-    ac.glVertex2f(tip.x + width * 0.0556, tip.y + height * 0.8333)
-    ac.glEnd()
-    # shaft, from the opposite corner to the neck
-    ac.glBegin(acsys.GL.Quads)
-    ac.glVertex2f(tip.x + width * 1.0230, tip.y + height * 0.8659)
-    ac.glVertex2f(tip.x + width * 0.5230, tip.y + height * 0.3659)
-    ac.glVertex2f(tip.x + width * 0.3659, tip.y + height * 0.5230)
-    ac.glVertex2f(tip.x + width * 0.8659, tip.y + height * 1.0230)
-    ac.glEnd()
-
-
-def draw_grow_icon(position: Position, color: Color) -> None:
-    size = Size(18, 18)
-    half = Size(size.width / 2, size.height / 2)
-    draw_corner_arrow(position, half, -1, -1, color)
-    draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1, color)
-
-
-def draw_shrink_icon(position: Position, color: Color) -> None:
-    size = Size(18, 18)
-    half = Size(size.width / 2, size.height / 2)
-    draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1, color)
-    draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1, color)
+    ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
 def load_texture(name: str) -> int:
@@ -92,6 +60,8 @@ class WidgetApplication:
         self.tire_texture = load_texture("tire")
         self.line_texture = load_texture("line")
         self.arrow_texture = load_texture("arrow")
+        self.grow_texture = load_texture("grow")
+        self.shrink_texture = load_texture("shrink")
 
         self.scale_buttons(self.on_scale_change)
         self.update_scale_buttons(self.settings.scale)
@@ -122,7 +92,7 @@ class WidgetApplication:
         self.update_scale_buttons(scale)
 
     def update_scale_buttons(self, scale: float):
-        ac.setSize(self.id, 248 * scale, 24 + 336 * scale)
+        ac.setSize(self.id, 248 * scale, 30 + 336 * scale)
         ac.setPosition(self.grow_button, 248 * scale - 80, 3)
         ac.setPosition(self.shrink_button, 248 * scale - 54, 3)
 
@@ -136,21 +106,21 @@ class WidgetApplication:
 
         can_grow = scale == SCALES[-1]
         grow_color = Color.white.brightness(0.2) if can_grow else Color.white
-        draw_grow_icon(Position(248 * scale - 80, 3), grow_color)
+        draw_icon(Position(248 * scale - 80, 3), grow_color, self.grow_texture)
 
         can_shrink = scale == SCALES[0]
         shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
-        draw_shrink_icon(Position(248 * scale - 54, 3), shrink_color)
+        draw_icon(Position(248 * scale - 54, 3), shrink_color, self.shrink_texture)
 
-        draw_line(Position(0, 24), scale, slip_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 24), scale, slip_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30), scale, slip_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30), scale, slip_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
 
-        draw_tire(Position(0, 24 + 28 * scale), scale, slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
-        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), scale, slip_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red), self.arrow_texture)  # fmt: skip
-        draw_tire(Position(184 * scale, 24 + 28 * scale), scale, slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(0, 30 + 28 * scale), scale, slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_arrow(Position(104.8 * scale, 30 + 28 * scale), scale, slip_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red), self.arrow_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 30 + 28 * scale), scale, slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
 
-        draw_tire(Position(0, 24 + 204 * scale), scale, slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
-        draw_tire(Position(184 * scale, 24 + 204 * scale), scale, slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(0, 30 + 204 * scale), scale, slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 30 + 204 * scale), scale, slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
 
-        draw_line(Position(0, 24 + 316 * scale), scale, slip_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 24 + 316 * scale), scale, slip_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30 + 316 * scale), scale, slip_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30 + 316 * scale), scale, slip_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
