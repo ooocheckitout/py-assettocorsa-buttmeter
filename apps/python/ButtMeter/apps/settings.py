@@ -64,7 +64,7 @@ def marker(position: Position, size: Size, value: float, limit: float, threshold
     # indicator
     fill = Color.grey.mix(color, level(threshold, value))
     ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
-    ac.glQuad(position.x + size.width + 12, position.y - 6, 24, 14)
+    ac.glQuad(position.x + 296, position.y - 6, 24, 14)
 
 
 def ratio_marker(position: Position, size: Size, ratio: float, limit: float, settings: Settings) -> None:
@@ -129,7 +129,7 @@ class SettingsApplication:
     def initialize(self) -> None:
         self.id = ac.newApp("Butt Meter Settings")
 
-        ac.setSize(self.id, 492, 832)
+        ac.setSize(self.id, 456, 832)
 
         self.listeners = []
 
@@ -256,7 +256,7 @@ class SettingsApplication:
 
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
-        marker_size = Size(320, 2)
+        marker_size = Size(284, 2)
 
         ratio_marker(Position(120, 104), marker_size, fl.slip_ratio, 0.125, settings)
         ratio_marker(Position(120, 120), marker_size, fr.slip_ratio, 0.125, settings)
