@@ -6,13 +6,13 @@ The telemetry visualizer for Assetto Corsa.
 
 ## Install
 
-Copy `WheelLock.zip` into Content Manager.
+Copy `ButtMeter.zip` into Content Manager.
 
 ## Enable
 
 `Documents/Assetto Corsa/cfg/python.ini`
 
 ```ini
-[WHEELLOCK]
+[BUTTMETER]
 ACTIVE=1
 ```

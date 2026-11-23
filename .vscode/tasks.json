@@ -10,7 +10,7 @@
     {
       "label": "package",
       "type": "shell",
-      "command": "git archive -o ButtMeter.zip HEAD apps content",
+      "command": "git archive -o ButtMeter.zip HEAD apps",
       "problemMatcher": []
     }
   ]

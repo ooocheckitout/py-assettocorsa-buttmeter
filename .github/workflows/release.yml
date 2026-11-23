@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git archive -o WheelLock.zip HEAD apps content
-      - run: gh release upload "${{ github.event.release.tag_name }}" WheelLock.zip --clobber
+      - run: git archive -o ButtMeter.zip HEAD apps
+      - run: gh release upload "${{ github.event.release.tag_name }}" ButtMeter.zip --clobber
         env:
           GH_TOKEN: ${{ github.token }}
