@@ -1,7 +1,7 @@
-import ac, acsys
+import ac, acsys, os
 
 from render import Color, Position, Size
-from settings import Settings, Threshold, save_settings, slip_fill
+from settings import Settings, save_settings, slip_fill
 from telemetry import read_snapshot
 
 SCALES = (0.5, 2 / 3, 1.0)
@@ -54,98 +54,27 @@ def draw_shrink_icon(position: Position, color: Color) -> None:
     draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1, color)
 
 
-def draw_rounded_corner(center: Position, radius: float, horizontal: float, vertical: float, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glBegin(acsys.GL.Quads)
-    ac.glVertex2f(center.x, center.y)
-    ac.glVertex2f(center.x + horizontal * radius, center.y)
-    ac.glVertex2f(center.x + horizontal * radius * 0.9239, center.y + vertical * radius * 0.3827)
-    ac.glVertex2f(center.x + horizontal * radius * 0.7071, center.y + vertical * radius * 0.7071)
-    ac.glVertex2f(center.x, center.y)
-    ac.glVertex2f(center.x + horizontal * radius * 0.7071, center.y + vertical * radius * 0.7071)
-    ac.glVertex2f(center.x + horizontal * radius * 0.3827, center.y + vertical * radius * 0.9239)
-    ac.glVertex2f(center.x, center.y + vertical * radius)
-    ac.glEnd()
+def load_texture(name: str) -> int:
+    folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "textures")
+    return ac.newTexture(os.path.join(folder, name + ".png"))
 
 
-def draw_rounded_block(position: Position, size: Size, radius: float, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(position.x + radius, position.y, size.width - radius * 2, size.height)
-    ac.glQuad(position.x, position.y + radius, radius, size.height - radius * 2)
-    ac.glQuad(position.x + size.width - radius, position.y + radius, radius, size.height - radius * 2)
-
-    left = position.x + radius
-    right = position.x + size.width - radius
-    top = position.y + radius
-    bottom = position.y + size.height - radius
-
-    draw_rounded_corner(Position(left, top), radius, -1, -1, color)
-    draw_rounded_corner(Position(right, top), radius, 1, -1, color)
-    draw_rounded_corner(Position(right, bottom), radius, 1, 1, color)
-    draw_rounded_corner(Position(left, bottom), radius, -1, 1, color)
-
-
-def draw_line(position: Position, scale: float, angle: float, threshold: Threshold, slide_color: Color) -> None:
+def draw_line(position: Position, scale: float, fill: Color, texture: int) -> None:
     size = Size(64 * scale, 20 * scale)
-    color = Color.grey.mix(slide_color, threshold.level(angle))
-    draw_rounded_block(position, size, size.width * 0.125, color)
+    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
-def draw_tire_column(position: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(position.x, position.y, size.width, size.height)
-
-
-def draw_tire_corner(center: Position, radius: float, horizontal: float, vertical: float, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glBegin(acsys.GL.Quads)
-    ac.glVertex2f(center.x, center.y)
-    ac.glVertex2f(center.x + horizontal * radius, center.y)
-    ac.glVertex2f(center.x + horizontal * radius * 0.9239, center.y + vertical * radius * 0.3827)
-    ac.glVertex2f(center.x + horizontal * radius * 0.7071, center.y + vertical * radius * 0.7071)
-    ac.glVertex2f(center.x, center.y)
-    ac.glVertex2f(center.x + horizontal * radius * 0.7071, center.y + vertical * radius * 0.7071)
-    ac.glVertex2f(center.x + horizontal * radius * 0.3827, center.y + vertical * radius * 0.9239)
-    ac.glVertex2f(center.x, center.y + vertical * radius)
-    ac.glEnd()
-
-
-def draw_tire(position: Position, scale: float, fill: Color) -> None:
+def draw_tire(position: Position, scale: float, fill: Color, texture: int) -> None:
     size = Size(64 * scale, 104 * scale)
-    radius = size.width * 0.125
-
-    left = position.x + radius
-    right = position.x + size.width - radius
-    top = position.y + radius
-    bottom = position.y + size.height - radius
-
-    middle = Size(size.width - radius * 2, size.height)
-    side = Size(radius, size.height - radius * 2)
-
-    draw_tire_column(Position(left, position.y), middle, fill)
-    draw_tire_column(Position(position.x, top), side, fill)
-    draw_tire_column(Position(right, top), side, fill)
-
-    draw_tire_corner(Position(left, top), radius, -1, -1, fill)
-    draw_tire_corner(Position(right, top), radius, 1, -1, fill)
-    draw_tire_corner(Position(right, bottom), radius, 1, 1, fill)
-    draw_tire_corner(Position(left, bottom), radius, -1, 1, fill)
+    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
-def draw_arrow(position: Position, slip: float, settings: Settings) -> None:
-    size = Size(38.4 * settings.scale, 280 * settings.scale)
-    third = size.width / 3
-    neck = position.y + third * 2
-
-    color = Color.grey.mix(Color.red, settings.body_slip.level(slip))
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
-    ac.glQuad(position.x + third, neck, third, position.y + size.height - neck)
-
-    ac.glBegin(acsys.GL.Triangles)
-    ac.glVertex2f(position.x, neck)
-    ac.glVertex2f(position.x + size.width, neck)
-    ac.glVertex2f(position.x + size.width / 2, position.y)
-    ac.glEnd()
+def draw_arrow(position: Position, scale: float, fill: Color, texture: int) -> None:
+    size = Size(38.4 * scale, 280 * scale)
+    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
 class WidgetApplication:
@@ -159,6 +88,10 @@ class WidgetApplication:
         ac.drawBorder(self.id, 0)
 
         self.listeners = []
+
+        self.tire_texture = load_texture("tire")
+        self.line_texture = load_texture("line")
+        self.arrow_texture = load_texture("arrow")
 
         self.scale_buttons(self.on_scale_change)
         self.update_scale_buttons(self.settings.scale)
@@ -186,6 +119,7 @@ class WidgetApplication:
     def on_scale_change(self, scale: float) -> None:
         self.settings.scale = scale
         save_settings(self.settings)
+        self.update_scale_buttons(scale)
 
     def update_scale_buttons(self, scale: float):
         ac.setSize(self.id, 248 * scale, 24 + 336 * scale)
@@ -208,15 +142,15 @@ class WidgetApplication:
         shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
         draw_shrink_icon(Position(248 * scale - 54, 3), shrink_color)
 
-        draw_line(Position(0, 24), scale, fl.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(184 * scale, 24), scale, fr.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(0, 24), scale, slip_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 24), scale, slip_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal), self.line_texture)  # fmt: skip
 
-        draw_tire(Position(0, 24 + 28 * scale), scale, slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
-        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), snapshot.body_slip, settings)
-        draw_tire(Position(184 * scale, 24 + 28 * scale), scale, slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_tire(Position(0, 24 + 28 * scale), scale, slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), scale, slip_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red), self.arrow_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 24 + 28 * scale), scale, slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
 
-        draw_tire(Position(0, 24 + 204 * scale), scale, slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
-        draw_tire(Position(184 * scale, 24 + 204 * scale), scale, slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_tire(Position(0, 24 + 204 * scale), scale, slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
+        draw_tire(Position(184 * scale, 24 + 204 * scale), scale, slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber), self.tire_texture)  # fmt: skip
 
-        draw_line(Position(0, 24 + 316 * scale), scale, rl.slip_angle, settings.oversteer, Color.red)
-        draw_line(Position(184 * scale, 24 + 316 * scale), scale, rr.slip_angle, settings.oversteer, Color.red)
+        draw_line(Position(0, 24 + 316 * scale), scale, slip_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 24 + 316 * scale), scale, slip_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red), self.line_texture)  # fmt: skip
