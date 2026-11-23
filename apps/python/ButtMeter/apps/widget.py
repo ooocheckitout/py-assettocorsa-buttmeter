@@ -30,14 +30,16 @@ def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertica
     ac.glEnd()
 
 
-def draw_grow_icon(position: Position, size: Size, color: Color) -> None:
+def draw_grow_icon(position: Position, color: Color) -> None:
+    size = Size(18, 18)
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
     draw_corner_arrow(position, half, -1, -1)
     draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1)
 
 
-def draw_shrink_icon(position: Position, size: Size, color: Color) -> None:
+def draw_shrink_icon(position: Position, color: Color) -> None:
+    size = Size(18, 18)
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
     draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1)
@@ -60,7 +62,8 @@ def level(threshold: Threshold, value: float) -> float:
     return max(0.0, min(level, 1.0))
 
 
-def draw_arrow(position: Position, size: Size, slip: float, settings: Settings) -> None:
+def draw_arrow(position: Position, slip: float, settings: Settings) -> None:
+    size = Size(38.4 * settings.scale, 280 * settings.scale)
     third = size.width / 3
     neck = position.y + third * 2
 
@@ -75,7 +78,8 @@ def draw_arrow(position: Position, size: Size, slip: float, settings: Settings) 
     ac.glEnd()
 
 
-def draw_tire(position: Position, size: Size, ratio: float, settings: Settings) -> None:
+def draw_tire(position: Position, ratio: float, settings: Settings) -> None:
+    size = Size(64 * settings.scale, 104 * settings.scale)
     if ratio < 0:
         color = Color.grey.mix(Color.purple, level(settings.lock, ratio))
     else:
@@ -141,7 +145,8 @@ def draw_tire(position: Position, size: Size, ratio: float, settings: Settings) 
     ac.glEnd()
 
 
-def draw_line(position: Position, size: Size, angle: float, threshold: Threshold, slide_color: Color) -> None:
+def draw_line(position: Position, scale: float, angle: float, threshold: Threshold, slide_color: Color) -> None:
+    size = Size(64 * scale, 20 * scale)
     color = Color.grey.mix(slide_color, level(threshold, angle))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     # middle column, full height
@@ -258,24 +263,20 @@ class WidgetApplication:
 
         can_grow = scale == SCALES[-1]
         grow_color = Color.white.brightness(0.2) if can_grow else Color.white
-        draw_grow_icon(Position(248 * scale - 80, 3), Size(18, 18), grow_color)
+        draw_grow_icon(Position(248 * scale - 80, 3), grow_color)
 
         can_shrink = scale == SCALES[0]
         shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
-        draw_shrink_icon(Position(248 * scale - 54, 3), Size(18, 18), shrink_color)
+        draw_shrink_icon(Position(248 * scale - 54, 3), shrink_color)
 
-        tire_size = Size(64 * scale, 104 * scale)
+        draw_tire(Position(0, 24 + 28 * scale), fl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 28 * scale), fr.slip_ratio, settings)
+        draw_tire(Position(0, 24 + 204 * scale), rl.slip_ratio, settings)
+        draw_tire(Position(184 * scale, 24 + 204 * scale), rr.slip_ratio, settings)
 
-        draw_tire(Position(0, 24 + 28 * scale), tire_size, fl.slip_ratio, settings)
-        draw_tire(Position(184 * scale, 24 + 28 * scale), tire_size, fr.slip_ratio, settings)
-        draw_tire(Position(0, 24 + 204 * scale), tire_size, rl.slip_ratio, settings)
-        draw_tire(Position(184 * scale, 24 + 204 * scale), tire_size, rr.slip_ratio, settings)
+        draw_line(Position(0, 24), scale, fl.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(184 * scale, 24), scale, fr.slip_angle, settings.understeer, Color.teal)
+        draw_line(Position(0, 24 + 316 * scale), scale, rl.slip_angle, settings.oversteer, Color.red)
+        draw_line(Position(184 * scale, 24 + 316 * scale), scale, rr.slip_angle, settings.oversteer, Color.red)
 
-        line_size = Size(64 * scale, 20 * scale)
-
-        draw_line(Position(0, 24), line_size, fl.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(184 * scale, 24), line_size, fr.slip_angle, settings.understeer, Color.teal)
-        draw_line(Position(0, 24 + 316 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
-        draw_line(Position(184 * scale, 24 + 316 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
-
-        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)  # fmt: skip
+        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), snapshot.body_slip, settings)

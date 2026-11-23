@@ -10,7 +10,8 @@ def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-def guidance_bar(position: Position, size: Size, left_color: Color, right_color: Color) -> None:
+def guidance_bar(position: Position, left_color: Color, right_color: Color) -> None:
+    size = Size(320, 20)
     base_color = Color.grey
 
     # purple gradient bar
@@ -52,7 +53,9 @@ def guidance_bar(position: Position, size: Size, left_color: Color, right_color:
     ac.glQuad(tick_position.x + size.width * 0.9, tick_position.y, tick_size.width, tick_size.height)
 
 
-def marker(position: Position, size: Size, value: float, limit: float, threshold: Threshold, color: Color) -> None:
+def marker(position: Position, value: float, limit: float, threshold: Threshold, color: Color) -> None:
+    size = Size(284, 2)
+
     # line
     ac.glColor4f(1.0, 1.0, 1.0, 0.15)
     ac.glQuad(position.x, position.y, size.width, size.height)
@@ -67,11 +70,11 @@ def marker(position: Position, size: Size, value: float, limit: float, threshold
     ac.glQuad(position.x + 296, position.y - 6, 24, 14)
 
 
-def ratio_marker(position: Position, size: Size, ratio: float, limit: float, settings: Settings) -> None:
+def ratio_marker(position: Position, ratio: float, limit: float, settings: Settings) -> None:
     if ratio < 0:
-        marker(position, size, ratio, limit, settings.lock, Color.purple)
+        marker(position, ratio, limit, settings.lock, Color.purple)
     else:
-        marker(position, size, ratio, limit, settings.spin, Color.amber)
+        marker(position, ratio, limit, settings.spin, Color.amber)
 
 
 def bar_label(app_id: int, position: Position, text: str) -> None:
@@ -248,25 +251,23 @@ class SettingsApplication:
     def render(self, _: float) -> None:
         snapshot = read_snapshot()
 
-        bar_size = Size(320, 20)
-        guidance_bar(Position(120, 64), bar_size, Color.purple, Color.amber)
-        guidance_bar(Position(120, 332), bar_size, Color.teal, Color.teal)
-        guidance_bar(Position(120, 520), bar_size, Color.red, Color.red)
-        guidance_bar(Position(120, 708), bar_size, Color.red, Color.red)
+        guidance_bar(Position(120, 64), Color.purple, Color.amber)
+        guidance_bar(Position(120, 332), Color.teal, Color.teal)
+        guidance_bar(Position(120, 520), Color.red, Color.red)
+        guidance_bar(Position(120, 708), Color.red, Color.red)
 
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
-        marker_size = Size(284, 2)
 
-        ratio_marker(Position(120, 104), marker_size, fl.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 120), marker_size, fr.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 136), marker_size, rl.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 152), marker_size, rr.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 104), fl.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 120), fr.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 136), rl.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 152), rr.slip_ratio, 0.125, settings)
 
-        marker(Position(120, 372), marker_size, fl.slip_angle, 12.5, settings.understeer, Color.teal)
-        marker(Position(120, 388), marker_size, fr.slip_angle, 12.5, settings.understeer, Color.teal)
+        marker(Position(120, 372), fl.slip_angle, 12.5, settings.understeer, Color.teal)
+        marker(Position(120, 388), fr.slip_angle, 12.5, settings.understeer, Color.teal)
 
-        marker(Position(120, 560), marker_size, rl.slip_angle, 12.5, settings.oversteer, Color.red)
-        marker(Position(120, 576), marker_size, rr.slip_angle, 12.5, settings.oversteer, Color.red)
+        marker(Position(120, 560), rl.slip_angle, 12.5, settings.oversteer, Color.red)
+        marker(Position(120, 576), rr.slip_angle, 12.5, settings.oversteer, Color.red)
 
-        marker(Position(120, 748), marker_size, snapshot.body_slip, 12.5, settings.body_slip, Color.red)
+        marker(Position(120, 748), snapshot.body_slip, 12.5, settings.body_slip, Color.red)
