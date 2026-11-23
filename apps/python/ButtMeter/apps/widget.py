@@ -16,7 +16,8 @@ def scale_button(app_id: int, on_click: object) -> int:
     return button
 
 
-def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertical: float) -> None:
+def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertical: float, color: Color) -> None:
+    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     tip = Position(
         position.x + (size.width if horizontal > 0 else 0),
         position.y + (size.height if vertical > 0 else 0),
@@ -41,18 +42,16 @@ def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertica
 
 def draw_grow_icon(position: Position, color: Color) -> None:
     size = Size(18, 18)
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
-    draw_corner_arrow(position, half, -1, -1)
-    draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1)
+    draw_corner_arrow(position, half, -1, -1, color)
+    draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1, color)
 
 
 def draw_shrink_icon(position: Position, color: Color) -> None:
     size = Size(18, 18)
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
-    draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1)
-    draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1)
+    draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1, color)
+    draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1, color)
 
 
 def level(threshold: Threshold, value: float) -> float:
