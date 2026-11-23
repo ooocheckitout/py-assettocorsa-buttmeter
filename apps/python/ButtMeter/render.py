@@ -12,6 +12,9 @@ class Color:
         self.blue = blue
         self.alpha = alpha
 
+    def __iter__(self):
+        return iter((self.red, self.green, self.blue, self.alpha))
+
     def mix(self, other: "Color", level: float) -> "Color":
         return Color(
             self.red + (other.red - self.red) * level,
@@ -24,12 +27,13 @@ class Color:
         return Color(self.red, self.green, self.blue, alpha)
 
 
-Color.grey = Color(0.25, 0.25, 0.25, 0.8)
-Color.red = Color(1.0, 0.25, 0.3)
-Color.teal = Color(0.2, 0.85, 0.8)
-Color.purple = Color(0.6, 0.3, 1.0)
-Color.amber = Color(1.0, 0.69, 0.0)
-Color.white = Color(0.9, 0.9, 0.9, 0.85)
+class KnownColors:
+    grey = Color(0.25, 0.25, 0.25, 0.8)
+    red = Color(1.0, 0.25, 0.3)
+    teal = Color(0.2, 0.85, 0.8)
+    purple = Color(0.6, 0.3, 1.0)
+    amber = Color(1.0, 0.69, 0.0)
+    white = Color(0.9, 0.9, 0.9, 0.85)
 
 
 class Point:
@@ -65,7 +69,7 @@ class Component(metaclass=ABCMeta):
 
     @staticmethod
     def paint(color: Color) -> None:
-        ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+        ac.glColor4f(*color)
 
     @staticmethod
     def fill(slot: Slot, color: Color) -> None:

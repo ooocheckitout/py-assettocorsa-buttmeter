@@ -1,6 +1,6 @@
 import ac, acsys
 
-from render import Color, Position, Size
+from render import Color, KnownColors, Position, Size
 from config import Settings, Threshold, save_settings, slip_ratio_fill, threshold_fill
 from telemetry import read_snapshot
 
@@ -42,23 +42,23 @@ def bar_label(app_id: int, position: Position, text: str) -> None:
 
 
 def draw_guidance_block(position: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuad(position.x, position.y, size.width, size.height)
 
 
 def draw_guidance_gradient(position: Position, size: Size, start_color: Color, end_color: Color) -> None:
     ac.glBegin(acsys.GL.Quads)
-    ac.glColor4f(start_color.red, start_color.green, start_color.blue, start_color.alpha)
+    ac.glColor4f(*start_color)
     ac.glVertex2f(position.x, position.y)
     ac.glVertex2f(position.x, position.y + size.height)
-    ac.glColor4f(end_color.red, end_color.green, end_color.blue, end_color.alpha)
+    ac.glColor4f(*end_color)
     ac.glVertex2f(position.x + size.width, position.y + size.height)
     ac.glVertex2f(position.x + size.width, position.y)
     ac.glEnd()
 
 
 def draw_guidance_tick(position: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuad(position.x - size.width / 2, position.y, size.width, size.height)
 
 
@@ -71,13 +71,13 @@ def draw_guidance_bar(position: Position, left_color: Color, right_color: Color)
     middle = Size(size.width * 0.4, size.height)
 
     draw_guidance_block(position, end, left_color)
-    draw_guidance_gradient(Position(position.x + end.width, position.y), fade, left_color, Color.grey)
-    draw_guidance_block(Position(position.x + end.width + fade.width, position.y), middle, Color.grey)
-    draw_guidance_gradient(Position(position.x + end.width + fade.width + middle.width, position.y), fade, Color.grey, right_color)  # fmt: skip
+    draw_guidance_gradient(Position(position.x + end.width, position.y), fade, left_color, KnownColors.grey)
+    draw_guidance_block(Position(position.x + end.width + fade.width, position.y), middle, KnownColors.grey)
+    draw_guidance_gradient(Position(position.x + end.width + fade.width + middle.width, position.y), fade, KnownColors.grey, right_color)  # fmt: skip
     draw_guidance_block(Position(position.x + size.width - end.width, position.y), end, right_color)
 
     for fraction in (0.1, 0.3, 0.5, 0.7, 0.9):
-        draw_guidance_tick(Position(position.x + size.width * fraction, position.y - 4), tick, Color.white)
+        draw_guidance_tick(Position(position.x + size.width * fraction, position.y - 4), tick, KnownColors.white)
 
 
 def marker_label(app_id: int, position: Position, text: str) -> None:
@@ -89,17 +89,17 @@ def marker_label(app_id: int, position: Position, text: str) -> None:
 
 
 def draw_marker_line(position: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuad(position.x, position.y, size.width, size.height)
 
 
 def draw_marker_knob(center: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuad(center.x - size.width / 2, center.y - size.height / 2, size.width, size.height)
 
 
 def draw_marker_indicator(position: Position, size: Size, color: Color) -> None:
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuad(position.x, position.y - size.height / 2, size.width, size.height)
 
 
@@ -107,8 +107,8 @@ def draw_marker(position: Position, progress: float, fill: Color) -> None:
     line = Size(284, 2)
     middle = position.y + line.height / 2
 
-    draw_marker_line(position, line, Color.white.brightness(0.15))
-    draw_marker_knob(Position(position.x + line.width * progress, middle), Size(4, 12), Color.white)
+    draw_marker_line(position, line, KnownColors.white.brightness(0.15))
+    draw_marker_knob(Position(position.x + line.width * progress, middle), Size(4, 12), KnownColors.white)
     draw_marker_indicator(Position(position.x + line.width + 12, middle), Size(24, 14), fill)
 
 
@@ -249,19 +249,19 @@ class SettingsApplication:
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
-        draw_guidance_bar(Position(120, 64), Color.purple, Color.amber)
+        draw_guidance_bar(Position(120, 64), KnownColors.purple, KnownColors.amber)
         draw_marker(Position(120, 104), marker_progress(fl.slip_ratio, 0.125), slip_ratio_fill(fl.slip_ratio, settings.lock, settings.spin))  # fmt: skip
         draw_marker(Position(120, 120), marker_progress(fr.slip_ratio, 0.125), slip_ratio_fill(fr.slip_ratio, settings.lock, settings.spin))  # fmt: skip
         draw_marker(Position(120, 136), marker_progress(rl.slip_ratio, 0.125), slip_ratio_fill(rl.slip_ratio, settings.lock, settings.spin))  # fmt: skip
         draw_marker(Position(120, 152), marker_progress(rr.slip_ratio, 0.125), slip_ratio_fill(rr.slip_ratio, settings.lock, settings.spin))  # fmt: skip
 
-        draw_guidance_bar(Position(120, 332), Color.teal, Color.teal)
-        draw_marker(Position(120, 372), marker_progress(fl.slip_angle, 12.5), threshold_fill(fl.slip_angle, settings.understeer, Color.teal))  # fmt: skip
-        draw_marker(Position(120, 388), marker_progress(fr.slip_angle, 12.5), threshold_fill(fr.slip_angle, settings.understeer, Color.teal))  # fmt: skip
+        draw_guidance_bar(Position(120, 332), KnownColors.teal, KnownColors.teal)
+        draw_marker(Position(120, 372), marker_progress(fl.slip_angle, 12.5), threshold_fill(fl.slip_angle, settings.understeer, KnownColors.teal))  # fmt: skip
+        draw_marker(Position(120, 388), marker_progress(fr.slip_angle, 12.5), threshold_fill(fr.slip_angle, settings.understeer, KnownColors.teal))  # fmt: skip
 
-        draw_guidance_bar(Position(120, 520), Color.red, Color.red)
-        draw_marker(Position(120, 560), marker_progress(rl.slip_angle, 12.5), threshold_fill(rl.slip_angle, settings.oversteer, Color.red))  # fmt: skip
-        draw_marker(Position(120, 576), marker_progress(rr.slip_angle, 12.5), threshold_fill(rr.slip_angle, settings.oversteer, Color.red))  # fmt: skip
+        draw_guidance_bar(Position(120, 520), KnownColors.red, KnownColors.red)
+        draw_marker(Position(120, 560), marker_progress(rl.slip_angle, 12.5), threshold_fill(rl.slip_angle, settings.oversteer, KnownColors.red))  # fmt: skip
+        draw_marker(Position(120, 576), marker_progress(rr.slip_angle, 12.5), threshold_fill(rr.slip_angle, settings.oversteer, KnownColors.red))  # fmt: skip
 
-        draw_guidance_bar(Position(120, 708), Color.red, Color.red)
-        draw_marker(Position(120, 748), marker_progress(snapshot.body_slip, 12.5), threshold_fill(snapshot.body_slip, settings.body_slip, Color.red))  # fmt: skip
+        draw_guidance_bar(Position(120, 708), KnownColors.red, KnownColors.red)
+        draw_marker(Position(120, 748), marker_progress(snapshot.body_slip, 12.5), threshold_fill(snapshot.body_slip, settings.body_slip, KnownColors.red))  # fmt: skip

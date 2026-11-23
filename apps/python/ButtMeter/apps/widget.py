@@ -1,6 +1,6 @@
 import ac, os
 
-from render import Color, Position, Size
+from render import Color, KnownColors, Position, Size
 from config import Settings, save_settings, slip_ratio_fill, threshold_fill
 from telemetry import read_snapshot
 
@@ -18,7 +18,7 @@ def scale_button(app_id: int, on_click: object) -> int:
 
 def draw_icon(position: Position, color: Color, texture: int) -> None:
     size = Size(18, 18)
-    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glColor4f(*color)
     ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
@@ -29,19 +29,19 @@ def load_texture(name: str) -> int:
 
 def draw_line(position: Position, scale: float, fill: Color, texture: int) -> None:
     size = Size(64 * scale, 20 * scale)
-    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glColor4f(*fill)
     ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
 def draw_tire(position: Position, scale: float, fill: Color, texture: int) -> None:
     size = Size(64 * scale, 104 * scale)
-    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glColor4f(*fill)
     ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
 def draw_arrow(position: Position, scale: float, fill: Color, texture: int) -> None:
     size = Size(38.4 * scale, 280 * scale)
-    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glColor4f(*fill)
     ac.glQuadTextured(position.x, position.y, size.width, size.height, texture)
 
 
@@ -105,22 +105,22 @@ class WidgetApplication:
         scale = settings.scale
 
         can_grow = scale == SCALES[-1]
-        grow_color = Color.white.brightness(0.2) if can_grow else Color.white
+        grow_color = KnownColors.white.brightness(0.2) if can_grow else KnownColors.white
         draw_icon(Position(248 * scale - 80, 3), grow_color, self.grow_texture)
 
         can_shrink = scale == SCALES[0]
-        shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
+        shrink_color = KnownColors.white.brightness(0.2) if can_shrink else KnownColors.white
         draw_icon(Position(248 * scale - 54, 3), shrink_color, self.shrink_texture)
 
-        draw_line(Position(0, 30), scale, threshold_fill(fl.slip_angle, settings.understeer, Color.teal), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 30), scale, threshold_fill(fr.slip_angle, settings.understeer, Color.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30), scale, threshold_fill(fl.slip_angle, settings.understeer, KnownColors.teal), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30), scale, threshold_fill(fr.slip_angle, settings.understeer, KnownColors.teal), self.line_texture)  # fmt: skip
 
         draw_tire(Position(0, 30 + 28 * scale), scale, slip_ratio_fill(fl.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
-        draw_arrow(Position(104.8 * scale, 30 + 28 * scale), scale, threshold_fill(snapshot.body_slip, settings.body_slip, Color.red), self.arrow_texture)  # fmt: skip
+        draw_arrow(Position(104.8 * scale, 30 + 28 * scale), scale, threshold_fill(snapshot.body_slip, settings.body_slip, KnownColors.red), self.arrow_texture)  # fmt: skip
         draw_tire(Position(184 * scale, 30 + 28 * scale), scale, slip_ratio_fill(fr.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
 
         draw_tire(Position(0, 30 + 204 * scale), scale, slip_ratio_fill(rl.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
         draw_tire(Position(184 * scale, 30 + 204 * scale), scale, slip_ratio_fill(rr.slip_ratio, settings.lock, settings.spin), self.tire_texture)  # fmt: skip
 
-        draw_line(Position(0, 30 + 316 * scale), scale, threshold_fill(rl.slip_angle, settings.oversteer, Color.red), self.line_texture)  # fmt: skip
-        draw_line(Position(184 * scale, 30 + 316 * scale), scale, threshold_fill(rr.slip_angle, settings.oversteer, Color.red), self.line_texture)  # fmt: skip
+        draw_line(Position(0, 30 + 316 * scale), scale, threshold_fill(rl.slip_angle, settings.oversteer, KnownColors.red), self.line_texture)  # fmt: skip
+        draw_line(Position(184 * scale, 30 + 316 * scale), scale, threshold_fill(rr.slip_angle, settings.oversteer, KnownColors.red), self.line_texture)  # fmt: skip

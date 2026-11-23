@@ -1,7 +1,7 @@
 import json
 import os
 
-from render import Color
+from render import Color, KnownColors
 
 
 class Threshold:
@@ -17,13 +17,13 @@ class Threshold:
 
 
 def threshold_fill(value: float, threshold: Threshold, color: Color) -> Color:
-    return Color.grey.mix(color, threshold.level(value))
+    return KnownColors.grey.mix(color, threshold.level(value))
 
 
 def slip_ratio_fill(slip_ratio: float, lock: Threshold, spin: Threshold) -> Color:
     if slip_ratio < 0:
-        return threshold_fill(slip_ratio, lock, Color.purple)
-    return threshold_fill(slip_ratio, spin, Color.amber)
+        return threshold_fill(slip_ratio, lock, KnownColors.purple)
+    return threshold_fill(slip_ratio, spin, KnownColors.amber)
 
 
 class Settings:
