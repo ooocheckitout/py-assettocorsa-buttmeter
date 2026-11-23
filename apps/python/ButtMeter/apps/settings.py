@@ -42,47 +42,43 @@ def bar_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "left")
 
 
+def draw_guidance_block(position: Position, size: Size, color: Color) -> None:
+    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glQuad(position.x, position.y, size.width, size.height)
+
+
+def draw_guidance_gradient(position: Position, size: Size, start_color: Color, end_color: Color) -> None:
+    ac.glBegin(acsys.GL.Quads)
+    ac.glColor4f(start_color.red, start_color.green, start_color.blue, start_color.alpha)
+    ac.glVertex2f(position.x, position.y)
+    ac.glVertex2f(position.x, position.y + size.height)
+    ac.glColor4f(end_color.red, end_color.green, end_color.blue, end_color.alpha)
+    ac.glVertex2f(position.x + size.width, position.y + size.height)
+    ac.glVertex2f(position.x + size.width, position.y)
+    ac.glEnd()
+
+
+def draw_guidance_tick(position: Position, size: Size, color: Color) -> None:
+    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
+    ac.glQuad(position.x - size.width / 2, position.y, size.width, size.height)
+
+
 def draw_guidance_bar(position: Position, left_color: Color, right_color: Color) -> None:
     size = Size(320, 20)
-    base_color = Color.grey
+    tick = Size(1, size.height + 8)
 
-    # purple gradient bar
-    ac.glColor4f(left_color.red, left_color.green, left_color.blue, left_color.alpha)
-    ac.glQuad(position.x, position.y, size.width * 0.1, size.height)
-    ac.glBegin(acsys.GL.Quads)
-    ac.glVertex2f(position.x + size.width * 0.1, position.y)
-    ac.glVertex2f(position.x + size.width * 0.1, position.y + size.height)
-    ac.glColor4f(base_color.red, base_color.green, base_color.blue, base_color.alpha)
-    ac.glVertex2f(position.x + size.width * 0.3, position.y + size.height)
-    ac.glVertex2f(position.x + size.width * 0.3, position.y)
-    ac.glEnd()
+    end = Size(size.width * 0.1, size.height)
+    fade = Size(size.width * 0.2, size.height)
+    middle = Size(size.width * 0.4, size.height)
 
-    # grey bar
-    ac.glQuad(position.x + size.width * 0.3, position.y, size.width * 0.4, size.height)
+    draw_guidance_block(position, end, left_color)
+    draw_guidance_gradient(Position(position.x + end.width, position.y), fade, left_color, Color.grey)
+    draw_guidance_block(Position(position.x + end.width + fade.width, position.y), middle, Color.grey)
+    draw_guidance_gradient(Position(position.x + end.width + fade.width + middle.width, position.y), fade, Color.grey, right_color)  # fmt: skip
+    draw_guidance_block(Position(position.x + size.width - end.width, position.y), end, right_color)
 
-    # amber gradient bar
-    ac.glBegin(acsys.GL.Quads)
-    ac.glVertex2f(position.x + size.width * 0.7, position.y)
-    ac.glVertex2f(position.x + size.width * 0.7, position.y + size.height)
-    ac.glColor4f(right_color.red, right_color.green, right_color.blue, right_color.alpha)
-    ac.glVertex2f(position.x + size.width * 0.9, position.y + size.height)
-    ac.glVertex2f(position.x + size.width * 0.9, position.y)
-    ac.glEnd()
-    ac.glQuad(position.x + size.width * 0.9, position.y, size.width * 0.1, size.height)
-
-    # ticks
-    tick_color = Color.white
-    tick_size = Size(1, size.height + 8)
-    tick_position = Position(position.x - tick_size.width / 2, position.y - 4)
-
-    ac.glColor4f(tick_color.red, tick_color.green, tick_color.blue, tick_color.alpha)
-
-    ac.glQuad(tick_position.x + size.width * 0.5, tick_position.y, tick_size.width, tick_size.height)
-
-    ac.glQuad(tick_position.x + size.width * 0.1, tick_position.y, tick_size.width, tick_size.height)
-    ac.glQuad(tick_position.x + size.width * 0.3, tick_position.y, tick_size.width, tick_size.height)
-    ac.glQuad(tick_position.x + size.width * 0.7, tick_position.y, tick_size.width, tick_size.height)
-    ac.glQuad(tick_position.x + size.width * 0.9, tick_position.y, tick_size.width, tick_size.height)
+    for fraction in (0.1, 0.3, 0.5, 0.7, 0.9):
+        draw_guidance_tick(Position(position.x + size.width * fraction, position.y - 4), tick, Color.white)
 
 
 def marker_label(app_id: int, position: Position, text: str) -> None:
