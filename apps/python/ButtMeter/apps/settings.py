@@ -10,6 +10,38 @@ def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def tick_label_left(app_id: int, position: Position, text: str) -> None:
+    label = ac.addLabel(app_id, text)
+    ac.setPosition(label, position.x, position.y - 24)
+    ac.setSize(label, 100, 16)
+    ac.setFontSize(label, 12)
+    ac.setFontAlignment(label, "left")
+
+
+def tick_label_center(app_id: int, position: Position, text: str) -> None:
+    label = ac.addLabel(app_id, text)
+    ac.setPosition(label, position.x - 50, position.y - 24)
+    ac.setSize(label, 100, 16)
+    ac.setFontSize(label, 12)
+    ac.setFontAlignment(label, "center")
+
+
+def tick_label_right(app_id: int, position: Position, text: str) -> None:
+    label = ac.addLabel(app_id, text)
+    ac.setPosition(label, position.x - 100, position.y - 24)
+    ac.setSize(label, 100, 16)
+    ac.setFontSize(label, 12)
+    ac.setFontAlignment(label, "right")
+
+
+def bar_label(app_id: int, position: Position, text: str) -> None:
+    label = ac.addLabel(app_id, text)
+    ac.setPosition(label, position.x, position.y + 1)
+    ac.setSize(label, 96, 20)
+    ac.setFontSize(label, 16)
+    ac.setFontAlignment(label, "left")
+
+
 def guidance_bar(position: Position, left_color: Color, right_color: Color) -> None:
     size = Size(320, 20)
     base_color = Color.grey
@@ -53,6 +85,14 @@ def guidance_bar(position: Position, left_color: Color, right_color: Color) -> N
     ac.glQuad(tick_position.x + size.width * 0.9, tick_position.y, tick_size.width, tick_size.height)
 
 
+def marker_label(app_id: int, position: Position, text: str) -> None:
+    label = ac.addLabel(app_id, text)
+    ac.setPosition(label, position.x, position.y - 7)
+    ac.setSize(label, 88, 16)
+    ac.setFontSize(label, 12)
+    ac.setFontAlignment(label, "left")
+
+
 def marker(position: Position, value: float, limit: float, threshold: Threshold, color: Color) -> None:
     size = Size(284, 2)
 
@@ -80,46 +120,6 @@ def ratio_marker(position: Position, ratio: float, limit: float, settings: Setti
         marker(position, ratio, limit, settings.spin, Color.amber)
 
 
-def bar_label(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x, position.y + 1)
-    ac.setSize(label, 96, 20)
-    ac.setFontSize(label, 16)
-    ac.setFontAlignment(label, "left")
-
-
-def tick_label_left(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x, position.y - 24)
-    ac.setSize(label, 100, 16)
-    ac.setFontSize(label, 12)
-    ac.setFontAlignment(label, "left")
-
-
-def tick_label_center(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x - 50, position.y - 24)
-    ac.setSize(label, 100, 16)
-    ac.setFontSize(label, 12)
-    ac.setFontAlignment(label, "center")
-
-
-def tick_label_right(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x - 100, position.y - 24)
-    ac.setSize(label, 100, 16)
-    ac.setFontSize(label, 12)
-    ac.setFontAlignment(label, "right")
-
-
-def marker_label(app_id: int, position: Position, text: str) -> None:
-    label = ac.addLabel(app_id, text)
-    ac.setPosition(label, position.x, position.y - 7)
-    ac.setSize(label, 88, 16)
-    ac.setFontSize(label, 12)
-    ac.setFontAlignment(label, "left")
-
-
 def threshold_label(app_id: int, position: Position, text: str) -> None:
     label = ac.addLabel(app_id, text)
     ac.setPosition(label, position.x, position.y + 2)
@@ -139,43 +139,39 @@ class SettingsApplication:
 
         self.listeners = []
 
-        self.threshold_steppers(Position(24, 200), "Lock", self.settings.lock, 0.01, self.on_lock_change)
-        self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, 0.01, self.on_spin_change)
-        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, 1.0, self.on_understeer_change)  # fmt: skip
-        self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, 1.0, self.on_oversteer_change)
-        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, 1.0, self.on_body_slip_change)
-
-        bar_label(self.id, Position(16, 64), "Slip ratio")
-        bar_label(self.id, Position(16, 332), "Slip angle")
-        bar_label(self.id, Position(16, 520), "Slip angle")
-        bar_label(self.id, Position(16, 708), "Body slip")
-
-        tick_label_center(self.id, Position(280, 64), "Grip")
-        tick_label_center(self.id, Position(280, 332), "Grip")
-        tick_label_center(self.id, Position(280, 520), "Grip")
-        tick_label_center(self.id, Position(280, 708), "Straight")
-
         tick_label_left(self.id, Position(120, 64), "Lock")
+        tick_label_center(self.id, Position(280, 64), "Grip")
         tick_label_right(self.id, Position(440, 64), "Spin")
-        tick_label_left(self.id, Position(120, 332), "Understeer")
-        tick_label_right(self.id, Position(440, 332), "Understeer")
-        tick_label_left(self.id, Position(120, 520), "Oversteer")
-        tick_label_right(self.id, Position(440, 520), "Oversteer")
-        tick_label_left(self.id, Position(120, 708), "Rotation")
-        tick_label_right(self.id, Position(440, 708), "Rotation")
-
+        bar_label(self.id, Position(16, 64), "Slip ratio")
         marker_label(self.id, Position(24, 104), "FL")
         marker_label(self.id, Position(24, 120), "FR")
         marker_label(self.id, Position(24, 136), "RL")
         marker_label(self.id, Position(24, 152), "RR")
+        self.threshold_steppers(Position(24, 200), "Lock", self.settings.lock, 0.01, self.on_lock_change)
+        self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, 0.01, self.on_spin_change)
 
+        tick_label_left(self.id, Position(120, 332), "Understeer")
+        tick_label_center(self.id, Position(280, 332), "Grip")
+        tick_label_right(self.id, Position(440, 332), "Understeer")
+        bar_label(self.id, Position(16, 332), "Slip angle")
         marker_label(self.id, Position(24, 372), "FL")
         marker_label(self.id, Position(24, 388), "FR")
+        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, 1.0, self.on_understeer_change)  # fmt: skip
 
+        tick_label_left(self.id, Position(120, 520), "Oversteer")
+        tick_label_center(self.id, Position(280, 520), "Grip")
+        tick_label_right(self.id, Position(440, 520), "Oversteer")
+        bar_label(self.id, Position(16, 520), "Slip angle")
         marker_label(self.id, Position(24, 560), "RL")
         marker_label(self.id, Position(24, 576), "RR")
+        self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, 1.0, self.on_oversteer_change)
 
+        tick_label_left(self.id, Position(120, 708), "Rotation")
+        tick_label_center(self.id, Position(280, 708), "Straight")
+        tick_label_right(self.id, Position(440, 708), "Rotation")
+        bar_label(self.id, Position(16, 708), "Body slip")
         marker_label(self.id, Position(24, 748), "Slip")
+        self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, 1.0, self.on_body_slip_change)
 
         # AC does not hold a reference to callbacks, so keep the bound method alive
         self.callback = self.render
@@ -254,23 +250,22 @@ class SettingsApplication:
     def render(self, _: float) -> None:
         snapshot = read_snapshot()
 
-        guidance_bar(Position(120, 64), Color.purple, Color.amber)
-        guidance_bar(Position(120, 332), Color.teal, Color.teal)
-        guidance_bar(Position(120, 520), Color.red, Color.red)
-        guidance_bar(Position(120, 708), Color.red, Color.red)
-
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
+        guidance_bar(Position(120, 64), Color.purple, Color.amber)
         ratio_marker(Position(120, 104), fl.slip_ratio, 0.125, settings)
         ratio_marker(Position(120, 120), fr.slip_ratio, 0.125, settings)
         ratio_marker(Position(120, 136), rl.slip_ratio, 0.125, settings)
         ratio_marker(Position(120, 152), rr.slip_ratio, 0.125, settings)
 
+        guidance_bar(Position(120, 332), Color.teal, Color.teal)
         marker(Position(120, 372), fl.slip_angle, 12.5, settings.understeer, Color.teal)
         marker(Position(120, 388), fr.slip_angle, 12.5, settings.understeer, Color.teal)
 
+        guidance_bar(Position(120, 520), Color.red, Color.red)
         marker(Position(120, 560), rl.slip_angle, 12.5, settings.oversteer, Color.red)
         marker(Position(120, 576), rr.slip_angle, 12.5, settings.oversteer, Color.red)
 
+        guidance_bar(Position(120, 708), Color.red, Color.red)
         marker(Position(120, 748), snapshot.body_slip, 12.5, settings.body_slip, Color.red)
