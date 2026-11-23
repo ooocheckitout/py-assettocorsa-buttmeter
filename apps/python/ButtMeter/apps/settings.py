@@ -62,12 +62,15 @@ def marker(position: Position, value: float, limit: float, threshold: Threshold,
 
     # marker
     ac.glColor4f(0.9, 0.9, 0.9, 0.85)
-    ac.glQuad(position.x + size.width * (0.5 + clamp(value, -limit, limit) / limit / 2) - 2, position.y + size.height / 2 - 6, 4, 12)  # fmt: skip
+    knob = Size(4, 12)
+    knob_progress_ratio = 0.5 + clamp(value, -limit, limit) / limit / 2
+    ac.glQuad(position.x + size.width * knob_progress_ratio - knob.width / 2, position.y + size.height / 2 - knob.height / 2, knob.width, knob.height)  # fmt: skip
 
     # indicator
+    indicator = Size(24, 14)
     fill = Color.grey.mix(color, level(threshold, value))
     ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
-    ac.glQuad(position.x + 296, position.y - 6, 24, 14)
+    ac.glQuad(position.x + size.width + 12, position.y + size.height / 2 - indicator.height / 2, indicator.width, indicator.height)  # fmt: skip
 
 
 def ratio_marker(position: Position, ratio: float, limit: float, settings: Settings) -> None:
