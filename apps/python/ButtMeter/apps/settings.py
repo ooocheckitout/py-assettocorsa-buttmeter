@@ -3,7 +3,7 @@ import ac, acsys
 from render import Color, Position, Size
 from settings import Settings, Threshold, save_settings
 from telemetry import read_snapshot
-from apps.widget import level
+from apps.widget import slip_fill
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -115,12 +115,6 @@ def draw_marker(position: Position, progress: float, fill: Color) -> None:
 
 def marker_progress(value: float, limit: float) -> float:
     return 0.5 + clamp(value, -limit, limit) / limit / 2
-
-
-def marker_fill(value: float, negative: Threshold, positive: Threshold, negative_color: Color, positive_color: Color) -> Color:  # fmt: skip
-    if value < 0:
-        return Color.grey.mix(negative_color, level(negative, value))
-    return Color.grey.mix(positive_color, level(positive, value))
 
 
 def threshold_label(app_id: int, position: Position, text: str) -> None:
@@ -257,18 +251,18 @@ class SettingsApplication:
         settings = self.settings
 
         draw_guidance_bar(Position(120, 64), Color.purple, Color.amber)
-        draw_marker(Position(120, 104), marker_progress(fl.slip_ratio, 0.125), marker_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
-        draw_marker(Position(120, 120), marker_progress(fr.slip_ratio, 0.125), marker_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
-        draw_marker(Position(120, 136), marker_progress(rl.slip_ratio, 0.125), marker_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
-        draw_marker(Position(120, 152), marker_progress(rr.slip_ratio, 0.125), marker_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_marker(Position(120, 104), marker_progress(fl.slip_ratio, 0.125), slip_fill(fl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_marker(Position(120, 120), marker_progress(fr.slip_ratio, 0.125), slip_fill(fr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_marker(Position(120, 136), marker_progress(rl.slip_ratio, 0.125), slip_fill(rl.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
+        draw_marker(Position(120, 152), marker_progress(rr.slip_ratio, 0.125), slip_fill(rr.slip_ratio, settings.lock, settings.spin, Color.purple, Color.amber))  # fmt: skip
 
         draw_guidance_bar(Position(120, 332), Color.teal, Color.teal)
-        draw_marker(Position(120, 372), marker_progress(fl.slip_angle, 12.5), marker_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal))  # fmt: skip
-        draw_marker(Position(120, 388), marker_progress(fr.slip_angle, 12.5), marker_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal))  # fmt: skip
+        draw_marker(Position(120, 372), marker_progress(fl.slip_angle, 12.5), slip_fill(fl.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal))  # fmt: skip
+        draw_marker(Position(120, 388), marker_progress(fr.slip_angle, 12.5), slip_fill(fr.slip_angle, settings.understeer, settings.understeer, Color.teal, Color.teal))  # fmt: skip
 
         draw_guidance_bar(Position(120, 520), Color.red, Color.red)
-        draw_marker(Position(120, 560), marker_progress(rl.slip_angle, 12.5), marker_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red))  # fmt: skip
-        draw_marker(Position(120, 576), marker_progress(rr.slip_angle, 12.5), marker_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red))  # fmt: skip
+        draw_marker(Position(120, 560), marker_progress(rl.slip_angle, 12.5), slip_fill(rl.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red))  # fmt: skip
+        draw_marker(Position(120, 576), marker_progress(rr.slip_angle, 12.5), slip_fill(rr.slip_angle, settings.oversteer, settings.oversteer, Color.red, Color.red))  # fmt: skip
 
         draw_guidance_bar(Position(120, 708), Color.red, Color.red)
-        draw_marker(Position(120, 748), marker_progress(snapshot.body_slip, 12.5), marker_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red))  # fmt: skip
+        draw_marker(Position(120, 748), marker_progress(snapshot.body_slip, 12.5), slip_fill(snapshot.body_slip, settings.body_slip, settings.body_slip, Color.red, Color.red))  # fmt: skip
