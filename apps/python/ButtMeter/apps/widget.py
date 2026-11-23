@@ -1,7 +1,7 @@
 import ac, os
 
 from render import Color, Position, Size
-from settings import Settings, save_settings, slip_ratio_fill, threshold_fill
+from config import Settings, save_settings, slip_ratio_fill, threshold_fill
 from telemetry import read_snapshot
 
 SCALES = (0.5, 2 / 3, 1.0)

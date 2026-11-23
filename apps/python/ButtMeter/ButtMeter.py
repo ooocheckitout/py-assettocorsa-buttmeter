@@ -8,7 +8,7 @@ for module_name, module in list(sys.modules.items()):
     if module_name != __name__ and os.path.abspath(getattr(module, "__file__", None) or "").startswith(app_directory + os.sep):
         del sys.modules[module_name]
 
-from settings import load_settings
+from config import load_settings
 from apps.settings import SettingsApplication
 from apps.widget import WidgetApplication
 

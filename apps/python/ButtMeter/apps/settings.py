@@ -1,7 +1,7 @@
 import ac, acsys
 
 from render import Color, Position, Size
-from settings import Settings, Threshold, save_settings, slip_ratio_fill, threshold_fill
+from config import Settings, Threshold, save_settings, slip_ratio_fill, threshold_fill
 from telemetry import read_snapshot
 
 
