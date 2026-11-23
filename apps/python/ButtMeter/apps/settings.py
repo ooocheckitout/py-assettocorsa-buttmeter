@@ -1,9 +1,8 @@
 import ac, acsys
 
 from render import Color, Position, Size
-from settings import Settings, Threshold, save_settings
+from settings import Settings, Threshold, save_settings, slip_fill
 from telemetry import read_snapshot
-from apps.widget import slip_fill
 
 
 def clamp(value: float, low: float, high: float) -> float:

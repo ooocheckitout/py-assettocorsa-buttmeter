@@ -1,11 +1,25 @@
 import json
 import os
 
+from render import Color
+
 
 class Threshold:
     def __init__(self, start: float, end: float) -> None:
         self.start = start
         self.end = end
+
+    def level(self, value: float) -> float:
+        if self.end <= self.start:
+            return 1.0 if abs(value) >= self.start else 0.0
+        level = (abs(value) - self.start) / (self.end - self.start)
+        return max(0.0, min(level, 1.0))
+
+
+def slip_fill(value: float, negative: Threshold, positive: Threshold, negative_color: Color, positive_color: Color) -> Color:  # fmt: skip
+    if value < 0:
+        return Color.grey.mix(negative_color, negative.level(value))
+    return Color.grey.mix(positive_color, positive.level(value))
 
 
 class Settings:

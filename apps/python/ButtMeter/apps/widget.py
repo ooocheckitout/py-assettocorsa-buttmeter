@@ -1,7 +1,7 @@
 import ac, acsys
 
 from render import Color, Position, Size
-from settings import Settings, Threshold, save_settings
+from settings import Settings, Threshold, save_settings, slip_fill
 from telemetry import read_snapshot
 
 SCALES = (0.5, 2 / 3, 1.0)
@@ -54,19 +54,6 @@ def draw_shrink_icon(position: Position, color: Color) -> None:
     draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1, color)
 
 
-def level(threshold: Threshold, value: float) -> float:
-    if threshold.end <= threshold.start:
-        return 1.0 if abs(value) >= threshold.start else 0.0
-    level = (abs(value) - threshold.start) / (threshold.end - threshold.start)
-    return max(0.0, min(level, 1.0))
-
-
-def slip_fill(value: float, negative: Threshold, positive: Threshold, negative_color: Color, positive_color: Color) -> Color:  # fmt: skip
-    if value < 0:
-        return Color.grey.mix(negative_color, level(negative, value))
-    return Color.grey.mix(positive_color, level(positive, value))
-
-
 def draw_rounded_corner(center: Position, radius: float, horizontal: float, vertical: float, color: Color) -> None:
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     ac.glBegin(acsys.GL.Quads)
@@ -100,7 +87,7 @@ def draw_rounded_block(position: Position, size: Size, radius: float, color: Col
 
 def draw_line(position: Position, scale: float, angle: float, threshold: Threshold, slide_color: Color) -> None:
     size = Size(64 * scale, 20 * scale)
-    color = Color.grey.mix(slide_color, level(threshold, angle))
+    color = Color.grey.mix(slide_color, threshold.level(angle))
     draw_rounded_block(position, size, size.width * 0.125, color)
 
 
@@ -150,7 +137,7 @@ def draw_arrow(position: Position, slip: float, settings: Settings) -> None:
     third = size.width / 3
     neck = position.y + third * 2
 
-    color = Color.grey.mix(Color.red, level(settings.body_slip, slip))
+    color = Color.grey.mix(Color.red, settings.body_slip.level(slip))
     ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     ac.glQuad(position.x + third, neck, third, position.y + size.height - neck)
 
