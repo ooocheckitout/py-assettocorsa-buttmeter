@@ -1,7 +1,7 @@
 import json
 import os
 
-from render import Color, KnownColors
+from buttmeter.render import Color, KnownColors
 
 
 class Threshold:
@@ -76,7 +76,8 @@ def default_settings() -> Settings:
     )
 
 
-path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+app_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+path = os.path.join(app_directory, "settings.json")
 
 
 def load_settings() -> Settings:

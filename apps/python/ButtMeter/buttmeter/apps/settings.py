@@ -1,8 +1,8 @@
 import ac, acsys
 
-from render import Color, KnownColors, Position, Size
-from config import Settings, Threshold, save_settings, slip_ratio_fill, threshold_fill
-from telemetry import read_snapshot
+from buttmeter.render import Color, KnownColors, Position, Size
+from buttmeter.config import Settings, Threshold, save_settings, slip_ratio_fill, threshold_fill
+from buttmeter.telemetry import read_snapshot
 
 
 def clamp(value: float, low: float, high: float) -> float:

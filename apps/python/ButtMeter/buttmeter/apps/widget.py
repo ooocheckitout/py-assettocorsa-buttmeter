@@ -1,8 +1,8 @@
 import ac, os
 
-from render import Color, KnownColors, Position, Size
-from config import Settings, save_settings, slip_ratio_fill, threshold_fill
-from telemetry import read_snapshot
+from buttmeter.render import Color, KnownColors, Position, Size
+from buttmeter.config import Settings, app_directory, save_settings, slip_ratio_fill, threshold_fill
+from buttmeter.telemetry import read_snapshot
 
 SCALES = (0.5, 2 / 3, 1.0)
 
@@ -23,8 +23,7 @@ def draw_icon(position: Position, color: Color, texture: int) -> None:
 
 
 def load_texture(name: str) -> int:
-    folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "textures")
-    return ac.newTexture(os.path.join(folder, name + ".png"))
+    return ac.newTexture(os.path.join(app_directory, "textures", name + ".png"))
 
 
 def draw_line(position: Position, scale: float, fill: Color, texture: int) -> None:
