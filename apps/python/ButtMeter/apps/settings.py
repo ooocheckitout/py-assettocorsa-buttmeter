@@ -42,7 +42,7 @@ def bar_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "left")
 
 
-def guidance_bar(position: Position, left_color: Color, right_color: Color) -> None:
+def draw_guidance_bar(position: Position, left_color: Color, right_color: Color) -> None:
     size = Size(320, 20)
     base_color = Color.grey
 
@@ -93,7 +93,7 @@ def marker_label(app_id: int, position: Position, text: str) -> None:
     ac.setFontAlignment(label, "left")
 
 
-def marker(position: Position, value: float, limit: float, threshold: Threshold, color: Color) -> None:
+def draw_marker(position: Position, value: float, limit: float, threshold: Threshold, color: Color) -> None:
     size = Size(284, 2)
 
     # line
@@ -113,11 +113,11 @@ def marker(position: Position, value: float, limit: float, threshold: Threshold,
     ac.glQuad(position.x + size.width + 12, position.y + size.height / 2 - indicator.height / 2, indicator.width, indicator.height)  # fmt: skip
 
 
-def ratio_marker(position: Position, ratio: float, limit: float, settings: Settings) -> None:
+def draw_ratio_marker(position: Position, ratio: float, limit: float, settings: Settings) -> None:
     if ratio < 0:
-        marker(position, ratio, limit, settings.lock, Color.purple)
+        draw_marker(position, ratio, limit, settings.lock, Color.purple)
     else:
-        marker(position, ratio, limit, settings.spin, Color.amber)
+        draw_marker(position, ratio, limit, settings.spin, Color.amber)
 
 
 def threshold_label(app_id: int, position: Position, text: str) -> None:
@@ -253,19 +253,19 @@ class SettingsApplication:
         fl, fr, rl, rr = snapshot.wheels
         settings = self.settings
 
-        guidance_bar(Position(120, 64), Color.purple, Color.amber)
-        ratio_marker(Position(120, 104), fl.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 120), fr.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 136), rl.slip_ratio, 0.125, settings)
-        ratio_marker(Position(120, 152), rr.slip_ratio, 0.125, settings)
+        draw_guidance_bar(Position(120, 64), Color.purple, Color.amber)
+        draw_ratio_marker(Position(120, 104), fl.slip_ratio, 0.125, settings)
+        draw_ratio_marker(Position(120, 120), fr.slip_ratio, 0.125, settings)
+        draw_ratio_marker(Position(120, 136), rl.slip_ratio, 0.125, settings)
+        draw_ratio_marker(Position(120, 152), rr.slip_ratio, 0.125, settings)
 
-        guidance_bar(Position(120, 332), Color.teal, Color.teal)
-        marker(Position(120, 372), fl.slip_angle, 12.5, settings.understeer, Color.teal)
-        marker(Position(120, 388), fr.slip_angle, 12.5, settings.understeer, Color.teal)
+        draw_guidance_bar(Position(120, 332), Color.teal, Color.teal)
+        draw_marker(Position(120, 372), fl.slip_angle, 12.5, settings.understeer, Color.teal)
+        draw_marker(Position(120, 388), fr.slip_angle, 12.5, settings.understeer, Color.teal)
 
-        guidance_bar(Position(120, 520), Color.red, Color.red)
-        marker(Position(120, 560), rl.slip_angle, 12.5, settings.oversteer, Color.red)
-        marker(Position(120, 576), rr.slip_angle, 12.5, settings.oversteer, Color.red)
+        draw_guidance_bar(Position(120, 520), Color.red, Color.red)
+        draw_marker(Position(120, 560), rl.slip_angle, 12.5, settings.oversteer, Color.red)
+        draw_marker(Position(120, 576), rr.slip_angle, 12.5, settings.oversteer, Color.red)
 
-        guidance_bar(Position(120, 708), Color.red, Color.red)
-        marker(Position(120, 748), snapshot.body_slip, 12.5, settings.body_slip, Color.red)
+        draw_guidance_bar(Position(120, 708), Color.red, Color.red)
+        draw_marker(Position(120, 748), snapshot.body_slip, 12.5, settings.body_slip, Color.red)
