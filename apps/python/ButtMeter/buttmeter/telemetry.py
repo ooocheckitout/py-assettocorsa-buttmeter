@@ -13,7 +13,7 @@ def body_slip(velocity: list) -> float:
     lateral, _, forward = velocity
     if math.hypot(lateral, forward) < 2.0:
         return 0.0
-    return math.degrees(math.atan2(lateral, forward))
+    return math.degrees(math.atan2(lateral, abs(forward)))
 
 
 class Snapshot:
