@@ -1,18 +1,14 @@
-# py-assettocorsa-telemetry
+# py-assettocorsa-buttmeter
 
-![alt text](<images/Screenshot 2026-11-16 115518.png>)
+![preview](docs/images/preview.webp)
 
-The telemetry visualizer for Assetto Corsa.
+A widget for Assetto Corsa that help you understand what happens with your tires. Uses Tire speed, Tire slip and Body slip to give a visual indication when you are on the edge.
 
 ## Install
 
-Copy `ButtMeter.zip` into Content Manager.
+1. Download `ButtMeter.zip` from GitHub release.
+1. Drag `ButtMeter.zip` into Content Manager.
+1. Go to `Settings > Assetto Corsa > Python Apps`.
+1. Tick the `Butt Meter` checkbox.
 
-## Enable
-
-`Documents/Assetto Corsa/cfg/python.ini`
-
-```ini
-[BUTTMETER]
-ACTIVE=1
-```
+![enable](docs/images/enable.webp)

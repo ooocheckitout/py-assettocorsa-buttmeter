@@ -68,7 +68,7 @@ class Settings:
 def default_settings() -> Settings:
     return Settings(
         lock=Threshold(0.05, 0.1),
-        spin=Threshold(0.05, 0.1),
+        spin=Threshold(0.07, 0.1),
         understeer=Threshold(6.0, 8.0),
         oversteer=Threshold(6.0, 8.0),
         body_slip=Threshold(3.0, 6.0),
