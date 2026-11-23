@@ -3,6 +3,7 @@ import ac, acsys
 from render import Color, Position, Size
 from settings import Settings, Threshold, save_settings
 from telemetry import read_snapshot
+from apps.widget import level
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -51,14 +52,26 @@ def guidance_bar(position: Position, size: Size, left_color: Color, right_color:
     ac.glQuad(tick_position.x + size.width * 0.9, tick_position.y, tick_size.width, tick_size.height)
 
 
-def marker(position: Position, size: Size, ratio: float, limit: float) -> None:
+def marker(position: Position, size: Size, value: float, limit: float, threshold: Threshold, color: Color) -> None:
     # line
     ac.glColor4f(1.0, 1.0, 1.0, 0.15)
     ac.glQuad(position.x, position.y, size.width, size.height)
 
     # marker
     ac.glColor4f(0.9, 0.9, 0.9, 0.85)
-    ac.glQuad(position.x + size.width * (0.5 + clamp(ratio, -limit, limit) / limit / 2) - 2, position.y + size.height / 2 - 6, 4, 12)  # fmt: skip
+    ac.glQuad(position.x + size.width * (0.5 + clamp(value, -limit, limit) / limit / 2) - 2, position.y + size.height / 2 - 6, 4, 12)  # fmt: skip
+
+    # indicator
+    fill = Color.grey.mix(color, level(threshold, value))
+    ac.glColor4f(fill.red, fill.green, fill.blue, fill.alpha)
+    ac.glQuad(position.x + size.width + 12, position.y - 6, 24, 14)
+
+
+def ratio_marker(position: Position, size: Size, ratio: float, limit: float, settings: Settings) -> None:
+    if ratio < 0:
+        marker(position, size, ratio, limit, settings.lock, Color.purple)
+    else:
+        marker(position, size, ratio, limit, settings.spin, Color.amber)
 
 
 def bar_label(app_id: int, position: Position, text: str) -> None:
@@ -116,13 +129,13 @@ class SettingsApplication:
     def initialize(self) -> None:
         self.id = ac.newApp("Butt Meter Settings")
 
-        ac.setSize(self.id, 456, 832)
+        ac.setSize(self.id, 492, 832)
 
         self.listeners = []
 
         self.threshold_steppers(Position(24, 200), "Lock", self.settings.lock, 0.01, self.on_lock_change)
         self.threshold_steppers(Position(24, 248), "Spin", self.settings.spin, 0.01, self.on_spin_change)
-        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, 1.0, self.on_understeer_change)
+        self.threshold_steppers(Position(24, 436), "Understeer", self.settings.understeer, 1.0, self.on_understeer_change)  # fmt: skip
         self.threshold_steppers(Position(24, 624), "Oversteer", self.settings.oversteer, 1.0, self.on_oversteer_change)
         self.threshold_steppers(Position(24, 796), "Rotation", self.settings.body_slip, 1.0, self.on_body_slip_change)
 
@@ -162,7 +175,7 @@ class SettingsApplication:
         self.callback = self.render
         ac.addRenderCallback(self.id, self.callback)
 
-    def threshold_steppers(self, position: Position, title: str, threshold: Threshold, step: float, on_change: object) -> None:
+    def threshold_steppers(self, position: Position, title: str, threshold: Threshold, step: float, on_change: object) -> None:  # fmt: skip
         threshold_label(self.id, position, title)
 
         def on_start_change(value: float) -> None:
@@ -242,16 +255,18 @@ class SettingsApplication:
         guidance_bar(Position(120, 708), bar_size, Color.red, Color.red)
 
         fl, fr, rl, rr = snapshot.wheels
+        settings = self.settings
         marker_size = Size(320, 2)
-        marker(Position(120, 104), marker_size, fl.slip_ratio, 0.125)
-        marker(Position(120, 120), marker_size, fr.slip_ratio, 0.125)
-        marker(Position(120, 136), marker_size, rl.slip_ratio, 0.125)
-        marker(Position(120, 152), marker_size, rr.slip_ratio, 0.125)
 
-        marker(Position(120, 372), marker_size, fl.slip_angle, 12.5)
-        marker(Position(120, 388), marker_size, fr.slip_angle, 12.5)
+        ratio_marker(Position(120, 104), marker_size, fl.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 120), marker_size, fr.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 136), marker_size, rl.slip_ratio, 0.125, settings)
+        ratio_marker(Position(120, 152), marker_size, rr.slip_ratio, 0.125, settings)
 
-        marker(Position(120, 560), marker_size, rl.slip_angle, 12.5)
-        marker(Position(120, 576), marker_size, rr.slip_angle, 12.5)
+        marker(Position(120, 372), marker_size, fl.slip_angle, 12.5, settings.understeer, Color.teal)
+        marker(Position(120, 388), marker_size, fr.slip_angle, 12.5, settings.understeer, Color.teal)
 
-        marker(Position(120, 748), marker_size, snapshot.body_slip, 12.5)
+        marker(Position(120, 560), marker_size, rl.slip_angle, 12.5, settings.oversteer, Color.red)
+        marker(Position(120, 576), marker_size, rr.slip_angle, 12.5, settings.oversteer, Color.red)
+
+        marker(Position(120, 748), marker_size, snapshot.body_slip, 12.5, settings.body_slip, Color.red)

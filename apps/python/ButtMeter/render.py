@@ -20,6 +20,9 @@ class Color:
             self.alpha + (other.alpha - self.alpha) * level,
         )
 
+    def brightness(self, alpha: float) -> "Color":
+        return Color(self.red, self.green, self.blue, alpha)
+
 
 Color.grey = Color(0.25, 0.25, 0.25, 0.8)
 Color.red = Color(1.0, 0.25, 0.3)

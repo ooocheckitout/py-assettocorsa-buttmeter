@@ -30,15 +30,15 @@ def draw_corner_arrow(position: Position, size: Size, horizontal: float, vertica
     ac.glEnd()
 
 
-def draw_grow_icon(position: Position, size: Size) -> None:
-    ac.glColor4f(Color.white.red, Color.white.green, Color.white.blue, Color.white.alpha)
+def draw_grow_icon(position: Position, size: Size, color: Color) -> None:
+    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
     draw_corner_arrow(position, half, -1, -1)
     draw_corner_arrow(Position(position.x + half.width, position.y + half.height), half, 1, 1)
 
 
-def draw_shrink_icon(position: Position, size: Size) -> None:
-    ac.glColor4f(Color.white.red, Color.white.green, Color.white.blue, Color.white.alpha)
+def draw_shrink_icon(position: Position, size: Size, color: Color) -> None:
+    ac.glColor4f(color.red, color.green, color.blue, color.alpha)
     half = Size(size.width / 2, size.height / 2)
     draw_corner_arrow(Position(position.x, position.y + half.height), half, 1, -1)
     draw_corner_arrow(Position(position.x + half.width, position.y), half, -1, 1)
@@ -86,7 +86,7 @@ def draw_tire(position: Position, size: Size, ratio: float, settings: Settings) 
     # left column, between the corners
     ac.glQuad(position.x, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
     # right column, between the corners
-    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)  # fmt: skip
 
     ac.glBegin(acsys.GL.Quads)
     # top left corner, left edge half
@@ -149,7 +149,7 @@ def draw_line(position: Position, size: Size, angle: float, threshold: Threshold
     # left column, between the corners
     ac.glQuad(position.x, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
     # right column, between the corners
-    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)
+    ac.glQuad(position.x + size.width * 0.875, position.y + size.width * 0.125, size.width * 0.125, size.height - size.width * 0.25)  # fmt: skip
 
     ac.glBegin(acsys.GL.Quads)
     # top left corner, left edge half
@@ -225,12 +225,14 @@ class WidgetApplication:
 
     def scale_buttons(self, on_change: object) -> None:
         def on_grow(x: float, y: float) -> None:
-            index = SCALES.index(self.settings.scale) + 1
-            on_change(SCALES[index])
+            index = SCALES.index(self.settings.scale)
+            if index < len(SCALES) - 1:
+                on_change(SCALES[index + 1])
 
         def on_shrink(x: float, y: float) -> None:
-            index = SCALES.index(self.settings.scale) - 1
-            on_change(SCALES[index])
+            index = SCALES.index(self.settings.scale)
+            if index > 0:
+                on_change(SCALES[index - 1])
 
         self.grow_button = scale_button(self.id, on_grow)
         self.shrink_button = scale_button(self.id, on_shrink)
@@ -245,8 +247,6 @@ class WidgetApplication:
         ac.setSize(self.id, 248 * scale, 24 + 336 * scale)
         ac.setPosition(self.grow_button, 248 * scale - 80, 3)
         ac.setPosition(self.shrink_button, 248 * scale - 54, 3)
-        ac.setVisible(self.grow_button, scale != SCALES[-1])
-        ac.setVisible(self.shrink_button, scale != SCALES[0])
 
     def render(self, _: float) -> None:
         ac.setBackgroundOpacity(self.id, 0.025)
@@ -256,10 +256,13 @@ class WidgetApplication:
         settings = self.settings
         scale = settings.scale
 
-        if scale != SCALES[-1]:
-            draw_grow_icon(Position(248 * scale - 80, 3), Size(18, 18))
-        if scale != SCALES[0]:
-            draw_shrink_icon(Position(248 * scale - 54, 3), Size(18, 18))
+        can_grow = scale == SCALES[-1]
+        grow_color = Color.white.brightness(0.2) if can_grow else Color.white
+        draw_grow_icon(Position(248 * scale - 80, 3), Size(18, 18), grow_color)
+
+        can_shrink = scale == SCALES[0]
+        shrink_color = Color.white.brightness(0.2) if can_shrink else Color.white
+        draw_shrink_icon(Position(248 * scale - 54, 3), Size(18, 18), shrink_color)
 
         tire_size = Size(64 * scale, 104 * scale)
 
@@ -275,4 +278,4 @@ class WidgetApplication:
         draw_line(Position(0, 24 + 316 * scale), line_size, rl.slip_angle, settings.oversteer, Color.red)
         draw_line(Position(184 * scale, 24 + 316 * scale), line_size, rr.slip_angle, settings.oversteer, Color.red)
 
-        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)
+        draw_arrow(Position(104.8 * scale, 24 + 28 * scale), Size(38.4 * scale, 280 * scale), snapshot.body_slip, settings)  # fmt: skip
